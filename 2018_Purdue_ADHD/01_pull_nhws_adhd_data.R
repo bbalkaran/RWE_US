@@ -49,9 +49,10 @@ adhd_data_1 <- selectNHWSdf("US", years = 2015:2018, vars = my_vars)
 adhd_data_2 <- selectNHWSdf("US", years = 2015:2018, cci = TRUE, dx = TRUE, demog = TRUE)
 common_id <- intersect(colnames(adhd_data_1), colnames(adhd_data_2))
 adhd_data <- merge(adhd_data_1, adhd_data_2, by = common_id, all = TRUE)
-save(adhd_data, file = "~/TEMP/purdue/CLEAN/adhd_data_raw.RData")
+fname <- file.path(getPath("RWE_US"),"2018_Purdue_ADHD","Data","adhd_data_raw.RData")
+save(adhd_data, file = fname)
 # ADHD and NON ADHD cohort selection
-rm(NHWS.num_all_us_2015,NHWS.num_all_us_2016, NHWS.num_all_us_2017, NHWS.num_all_us_2018, NHWS.char_all)
+unloadNHWSdata()
 # ADHD
 adhd <- adhd_data[ADYES == 1 | ADDX == 1 | ADHYES == 1 | ADHDX == 1]
 adhd <- getIndex(adhd)
@@ -64,8 +65,8 @@ non_adhd$cohort <- "Non-ADHD"
 # Combine Data
 adhd_data <- list(adhd, non_adhd)
 adhd_data <- rbindlist(adhd_data)
-fpath <- file.path(getPath('RWE_US'),'2018_Purdue_ADHD/Data/adhd_data.RData')
-save(adhd_data, file = fpath)
+fname <- file.path(getPath("RWE_US"),"2018_Purdue_ADHD","Data","adhd_data.RData")
+save(adhd_data, file = fname)
 
 
 

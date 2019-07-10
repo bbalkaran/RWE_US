@@ -1,11 +1,11 @@
 #  NHWS
-fpath <- file.path(getPath('RWE_US'),'2018_Purdue_ADHD/Data/adhd_data.RData')
-load(fpath)
+fname <- file.path(getPath('RWE_US'),'2018_Purdue_ADHD','Data','adhd_data.RData')
+load(fname)
 NHWS <- adhd_data[cohort=="ADHD"]
 # Linkable
 # Get Link ID
-fpath <- file.path(getPath('KHDICT'),'LINKER/hv/2015-2018 Master File.txt')
-nhws_link   <- fread(fpath)
+fname <- file.path(getPath('KHDICT'),'LINKER','hv','2015-2018 Master File.txt')
+nhws_link   <- fread(fname)
 nhws_link <- nhws_link[HVID != "0"]
 #ehr_link    <- fread("~/OneDrive - Kantar/KHDICT/LINKER/2015-2018 Linked EHR IDs.txt")
 #ehr_link$HVID <- tolower(ehr_link$HVID)
@@ -14,7 +14,7 @@ linkable <- nhws_link[zKey %in% NHWS$zKey]
 linkable <- linkable[,c('zKey','HVID')]
 linkable <- unique(linkable)
 
-setwd(file.path(getPath('RWE_US'),'2018_Purdue_ADHD/Data/'))
+setwd(file.path(getPath('RWE_US'),'2018_Purdue_ADHD','Data'))
 # Get claims data
 md_claims_1 <- fread("ADHD Medical Claims.csv",
                    colClasses = list(character = c('ndc_code','record_id','claim_id','hvid')))
@@ -50,7 +50,7 @@ non_adhd_icd <- searchCodes(search = 'code', vocabulary = c("ICD9CM","ICD10CM"),
 # From Drug List
 drugs <- fread("adhd_drug_list", sep ="\n", header = FALSE)
 drugs <- unique(sapply(strsplit(drugs$V1, " "), function(z){z[1]}))
-ndc_from_list <- drugSearch(drugs = drugs, indication = c("ADD","ADHD","attention deficit"))
+ndc_from_list <- drugSearch(drugs = drugs, indication = c("ADD","ADHD","attention deficit","attention-deficit"))
 #ndc_from_list <- drugSearch(drugs = drugs)
 # ndc_details_drug <- getNDCmap(ndc_from_list$concept_code)
 # # For Indication

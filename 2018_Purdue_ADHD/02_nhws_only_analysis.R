@@ -1,7 +1,7 @@
 library(kollekt)
 library(table1)
-fpath <- file.path(getPath('RWE_US'),'2018_Purdue_ADHD/Data/adhd_data.RData')
-load(fpath)
+fname <- file.path(getPath('RWE_US'),'2018_Purdue_ADHD','Data','adhd_data.RData')
+load(fname)
 NHWS <- adhd_data
 
 mh_disorders <- c("Anxiety","Depression","Attention","Bipolar disorder","Panic disorder",
@@ -65,12 +65,13 @@ my.render.cat <- function(x) {
                                                   sprintf("%d (%0.1f %%)", FREQ, PCT))))
 }
 
-# fatorize factor variables
+# Making sure the NA values are assigned the correct value of FALSE (0 or 2 depending on initial codiing)
 for(cname in comorb){
   temp <- NHWS[[cname]][!is.na(NHWS[[cname]])]
   temp <- unique(temp[temp!=1])
   NHWS[[cname]][is.na(NHWS[[cname]])] <- temp
 }
+# fatorize factor variables
 NHWS2 <- factorize(NHWS)
 
 # Table 6
