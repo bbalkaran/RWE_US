@@ -50,7 +50,10 @@ non_adhd_icd <- searchCodes(search = 'code', vocabulary = c("ICD9CM","ICD10CM"),
 # From Drug List
 drugs <- fread("adhd_drug_list", sep ="\n", header = FALSE)
 drugs <- unique(sapply(strsplit(drugs$V1, " "), function(z){z[1]}))
-ndc_from_list <- drugSearch(drugs = drugs, indication = c("ADD","ADHD","attention deficit","attention-deficit"))
+ndc_from_list_1 <- drugSearch(drugs = drugs, indication = c("ADD","ADHD"), indication_case_ignore = FALSE)
+ndc_from_list_2 <- drugSearch(drugs = drugs, indication = c("attention deficit","attention-deficit"))
+ndc_from_list <- combineDrugSearch(list(ndc_from_list_1,ndc_from_list_2))
+ndc_from_list <- ndc_from_list[drug_name != 'Sodium chloride']
 #ndc_from_list <- drugSearch(drugs = drugs)
 # ndc_details_drug <- getNDCmap(ndc_from_list$concept_code)
 # # For Indication
