@@ -13,13 +13,14 @@
 
 library(tidyverse)
 library(magrittr)
+library(kollekt)
 options(scipen = 999)
 
 # 2. medical claims -----
-Enrollment_File <- read_csv("./Analysis/Data/Raw/Closed_Claims/109_Enrollment_File.csv")
-Mx_Header <- read.csv("./Analysis/Data/Raw/Closed_Claims/109_Medical_Claims_Header.csv", stringsAsFactors = F)
-Mx_Service_Lines <- read.csv("./Analysis/Data/Raw/Closed_Claims/109_Medical_Claims_Service_Lines.csv", stringsAsFactors = F)
-Rx_Claims <- read.csv("./Analysis/Data/Raw/Closed_Claims/109_Pharmacy_Claims.csv", stringsAsFactors = F)
+Enrollment_File <- read_csv("~/Kantar/Arunajadai, Srikesh (KH) - RWE_US/Lilly_migraine_prevention_161103482_2/Raw/Closed_Claims/109_Enrollment_File.csv")
+Mx_Header <- read_csv("~/Kantar/Arunajadai, Srikesh (KH) - RWE_US/Lilly_migraine_prevention_161103482_2/Raw/Closed_Claims/109_Medical_Claims_Header.csv")
+Mx_Service_Lines <- read_csv("~/Kantar/Arunajadai, Srikesh (KH) - RWE_US/Lilly_migraine_prevention_161103482_2/Raw/Closed_Claims/109_Medical_Claims_Service_Lines.csv")
+Rx_Claims <- read_csv("~/Kantar/Arunajadai, Srikesh (KH) - RWE_US/Lilly_migraine_prevention_161103482_2/Raw/Closed_Claims/109_Pharmacy_Claims.csv")
 
 # reformat header... only run these once: using magrittr here
 # Mx_Header$admission_date %<>% as.Date('%Y-%m-%d')
@@ -38,14 +39,13 @@ Rx_Claims <- read.csv("./Analysis/Data/Raw/Closed_Claims/109_Pharmacy_Claims.csv
 
 
 # 2A. Clean enrollment file -----
-Enrollment_File <- Enrollment_File %>% filter(has_closed_medical_benefit== T & has_closed_pharmacy_benefit == T) # all closed
+Enrollment_File <- Enrollment_File %>% filter(has_closed_medical_benefit== T & has_closed_pharmacy_benefit == T) # all closed 2,516
 
 
 
 # 2B. Clean header file -----
 
 # select out migraine diagnoses
-Mx_Header$d1 %>% grep("G43")
 
 migraine_ICD10 <- grep("G43", Mx_Header$d1, value = T, ignore.case = T)
 migraine_ICD9 <- grep("346", Mx_Header$d1, value = T)
@@ -78,34 +78,41 @@ Migraine_Header <- Mx_Header %>% filter(d1 %in% migraine_ICDs |
                        d23 %in% migraine_ICDs | 
                        d24 %in% migraine_ICDs | 
                        d25 %in% migraine_ICDs | 
-                       d26 %in% migraine_ICDs) %>% as_tibble()
+                       d26 %in% migraine_ICDs) # 1,614 claims
 
 Migraine_Header_2017 <- Migraine_Header %>% filter(claim_date >= "2017-01-01" & claim_date <= "2017-12-31" )
-  # 215 claims, 84 patients
-
-
-
-
-
-# do this for pharmacy claims too at a later date 
-
-
-#save(M.ClosedClaims, file = "../Data/Claims/Medical_Claims.RData")
-
-
-
-
+  # 214 claims, 84 patients
 
 
 
 # 3. Pharmacy claims -----
-Rx_Claims <- read_csv("./Analysis/Data/Raw/Closed_Claims/109_Pharmacy_Claims.csv")
-Triptan_and_Ergot_Meds <- read_csv("Analysis/Data/Medications_Lists/Triptan_and_Ergot_Meds.csv")
-triptans <- grep("triptan", Triptan_and_Ergot_Meds$`Kantar Grouping`, value = T)
-ergots <- grep('ergot', Triptan_and_Ergot_Meds$`Kantar Grouping`, value = T, ignore.case = T)
-inclusion_meds <- Triptan_and_Ergot_Meds %>% filter(`Kantar Grouping` %in% triptans | `Kantar Grouping` %in% ergots)
+Rx_Claims <- read_csv("~/Kantar/Arunajadai, Srikesh (KH) - RWE_US/Lilly_migraine_prevention_161103482_2/Raw/Closed_Claims/109_Pharmacy_Claims.csv")
+Triptan_and_Ergot_Meds <- read.csv("~/Kantar/Arunajadai, Srikesh (KH) - RWE_US/Lilly_migraine_prevention_161103482_2/Medications_Lists/Triptan_and_Ergot_Meds.csv", stringsAsFactors = F)
+triptans <- grep("triptan", Triptan_and_Ergot_Meds$Kantar.Grouping, value = T)
+ergots <- grep('ergot', Triptan_and_Ergot_Meds$Kantar.Grouping, value = T, ignore.case = T)
+inclusion_meds <- Triptan_and_Ergot_Meds %>% filter(Kantar.Grouping %in% triptans | Kantar.Grouping %in% ergots) # not all NDCs 11 digits, need to cross-ref w/ OHDSI
 
+project_path <- file.path(getPath('KHDICT'),'OHDSI')
+file_name <- file.path(project_path,'CONCEPT.csv')
+scan(file_name, what = character())
+OHDSI <- read_delim("~/Kantar/Arunajadai, Srikesh (KH) - KHDICT/OHDSI/CONCEPT.csv", 
+                    "\t", escape_double = FALSE, trim_ws = TRUE)
 
+OHDSI <- OHDSI %>% filter(vocabulary_id == "NDC")
+
+ndcs <- c(grep("dihydroergot", OHDSI$concept_name, value = T, ignore.case = T),
+             grep("almotriptan", OHDSI$concept_name, value = T, ignore.case = T),
+             grep("Eletriptan", OHDSI$concept_name, value = T, ignore.case = T),
+             grep("Ergotamine", OHDSI$concept_name, value = T, ignore.case = T),
+             grep("Frovatriptan", OHDSI$concept_name, value = T, ignore.case = T),
+             grep("Sumatriptan", OHDSI$concept_name, value = T, ignore.case = T),
+             grep("Naratriptan", OHDSI$concept_name, value = T, ignore.case = T),
+             grep("Rizatriptan", OHDSI$concept_name, value = T, ignore.case = T),
+             grep("Zolmitriptan", OHDSI$concept_name, value = T, ignore.case = T))
+
+migraine_NDCs <- OHDSI %>% filter(concept_name %in% ndcs)
+dropthese <- grep("belladonna", migraine_NDCs$concept_name, value = T, ignore.case = T)
+migraine_NDCs <- migraine_NDCs %>% filter(!concept_name %in% dropthese )
 
 # reformat  claims ... only run these once
 Rx_Claims$patient_dob %<>%  as.Date('%m/%d/%Y')
@@ -117,16 +124,33 @@ Rx_Claims$received_date %<>%  as.Date('%m/%d/%Y')
 
 Rx_Claims <- Rx_Claims %>% filter(is.na(reject_code_1) & is.na(reject_code_2) & 
                                     is.na(reject_code_3) & is.na(reject_code_4) & is.na(reject_code_5))# 129,752 claims
-Rx_Claims <- Rx_Claims %>% filter(transaction_type == "PAID")
+Rx_Claims <- Rx_Claims %>% filter(transaction_type == "PAID") # 108,367 claims
+
+
          
-Inclusion_Rx_Claims <- Rx_Claims%>% filter(ndc11 %in% inclusion_meds$code)
-Inclusion_Rx_Claims_2017 <- Inclusion_Rx_Claims %>% filter(date_of_service >= "2017-01-01" & date_of_service <= "2017-12-31") # 427 claims, 73 patients
+Inclusion_Rx_Claims <- Rx_Claims%>% filter(ndc11 %in% inclusion_meds$code | ndc11 %in% migraine_NDCs$concept_code) 
+Inclusion_Rx_Claims_2017 <- Inclusion_Rx_Claims %>% filter(date_of_service >= "2017-01-01" & date_of_service <= "2017-12-31") # 427 claims, 73 patients; without OHDSI NCDs
+                                                                                                                              # 431 claims, 74 patients
+# 2C. clean service line ---- 
+
+Mx_Service_Lines_Migraine <- Mx_Service_Lines %>% filter(client_patient_id %in% Migraine_Header_2017$client_patient_id)
+Mx_Service_Lines_Migraine_2017 <- Mx_Service_Lines_Migraine %>% filter(date_of_service >= "2017-01-01" & date_of_service <= "2017-12-31")
 
 
 
+# 4. add in bridging file to claims
+
+bridging_file <- read_delim("~/Kantar/Arunajadai, Srikesh (KH) - KHDICT/LINKER/komodo/komodo_bridge_06202019.txt", 
+                            "\t", escape_double = FALSE, trim_ws = TRUE)
+
+bridging_file <- bridging_file %>% mutate(client_patient_id = `Komodo ID`)
 
 
+Migraine_Header_2017 <- Migraine_Header_2017 %>% left_join(bridging_file) # all 84 patients have zkey
+
+Inclusion_Rx_Claims_2017 <- Inclusion_Rx_Claims_2017 %>% left_join(bridging_file) # all 74 patients have zkey
 
 
+Mx_Service_Lines_Migraine_2017 <- Mx_Service_Lines_Migraine_2017 %>% left_join(bridging_file) # all 79 patients have zKey
 
 
