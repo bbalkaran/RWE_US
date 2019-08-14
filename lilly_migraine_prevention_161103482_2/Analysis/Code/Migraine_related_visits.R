@@ -14,18 +14,17 @@
 library(tidyverse)
 library(xlsx)
 library(data.table)
+library(kollekt)
+
+project_path <- file.path(getPath('KHDICT'),'OHDSI')
 
 
+file_name <- file.path(project_path,'CONCEPT.csv')
+scan(file_name, what = character())
+OHDSI <- read_delim("~/Kantar/Arunajadai, Srikesh (KH) - KHDICT/OHDSI/CONCEPT.csv", 
+                    "\t", escape_double = FALSE, trim_ws = TRUE)
 
-
-load("../Data/Claims/Medical_Claims.RData")
-
-Dir <- list.files("C:/Users/balkaranb/OneDrive - Kantar/Projects/OHDSI_Vocabularies/")
-paths<- lapply(Dir, function(x){paste("C:/Users/balkaranb/OneDrive - Kantar/Projects/OHDSI_Vocabularies/", x, sep = "")})
-paths[[10]] <- NULL
-OHDSI <- lapply(paths, fread)
-
-OHDSI <- OHDSI[[1]]
+OHDSI <- OHDSI %>% filter(vocabulary_id == "ICD10CM" |  vocabulary_id == "ICD9CM")
 
 # create vectors for list of complications
 Migraine_ICD_text <- grep("migraine", OHDSI$concept_name, value = T, ignore.case = T)
@@ -43,7 +42,7 @@ Migraine_complications_text <- list(grep("status migrainosus", OHDSI$concept_nam
                                     grep("serotonin syndrome", OHDSI$concept_name, value = T, ignore.case = T))
 
 Migraine_complcations_ICD <- list(
-  grep("T50.995A", OHDSI$concept_code, value = T, ignore.case = T),
+  grep("T50.995", OHDSI$concept_code, value = T, ignore.case = T),
   grep("R10.9$",OHDSI$concept_code, value = T, ignore.case = T),
   grep("T39.395A ",OHDSI$concept_code, value = T, ignore.case = T))
 
@@ -54,4 +53,4 @@ Migraine_OHDSI_2 <- OHDSI %>% filter(concept_code %in% unlist(Migraine_complcati
 Migraine_complications <- Migraine_OHDSI %>% full_join(Migraine_OHDSI_2) %>%
   as_tibble() %>% distinct()
 Migraine_complications <- Migraine_complications %>% select(-standard_concept, -valid_start_date, -valid_end_date, -invalid_reason)%>% arrange(concept_name)
-write.xlsx(Migraine_complications, file = "../Data/Potential_Migraine_Complications_ICDcodes.xlsx")
+#write.xlsx(Migraine_complications, file = "../Data/Potential_Migraine_Complications_ICDcodes.xlsx")
