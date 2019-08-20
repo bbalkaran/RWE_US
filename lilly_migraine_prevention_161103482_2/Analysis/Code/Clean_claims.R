@@ -6,13 +6,14 @@
 #  Project:161103482-2
 #  Project Manager: Janelle Cambron-Mellet
 #  Date Created: 7/26/19
-#  Date Edited: 7/29/19
+#  Date Edited: 8/19/19
 ########################################################
 
 # 1. workspace -----
 
 library(tidyverse)
 library(magrittr)
+library(openxlsx)
 library(kollekt)
 options(scipen = 999)
 
@@ -23,19 +24,19 @@ Mx_Service_Lines <- read_csv("~/Kantar/Arunajadai, Srikesh (KH) - RWE_US/Lilly_m
 Rx_Claims <- read_csv("~/Kantar/Arunajadai, Srikesh (KH) - RWE_US/Lilly_migraine_prevention_161103482_2/Raw/Closed_Claims/109_Pharmacy_Claims.csv")
 
 # reformat header... only run these once: using magrittr here
-# Mx_Header$admission_date %<>% as.Date('%Y-%m-%d')
-# Mx_Header$discharge_date %<>% as.Date('%Y-%m-%d')
-# Mx_Header$claim_date %<>% as.Date('%Y-%m-%d')
-# Mx_Header$file_date %<>% as.Date('%Y-%m-%d')
-# Mx_Header$patient_dob %<>% as.Date('%Y-%m-%d')
-# Mx_Header$received_date %<>% as.Date('%Y-%m-%d')
+Mx_Header$admission_date %<>% as.Date('%Y-%m-%d')
+Mx_Header$discharge_date %<>% as.Date('%Y-%m-%d')
+Mx_Header$claim_date %<>% as.Date('%Y-%m-%d')
+Mx_Header$file_date %<>% as.Date('%Y-%m-%d')
+Mx_Header$patient_dob %<>% as.Date('%Y-%m-%d')
+Mx_Header$received_date %<>% as.Date('%Y-%m-%d')
 
 #reformat service line .... only run these once
-# Mx_Service_Lines$service_to %<>% as.Date('%m/%d/%Y')
-# Mx_Service_Lines$service_from %<>%  as.Date('%m/%d/%Y')
-# Mx_Service_Lines$file_date %<>%  as.Date('%m/%d/%Y')
-# Mx_Service_Lines$date_of_service %<>%  as.Date('%m/%d/%Y')
-# Mx_Service_Lines$received_date %<>%  as.Date('%m/%d/%Y')
+Mx_Service_Lines$service_to %<>% as.Date('%m/%d/%Y')
+Mx_Service_Lines$service_from %<>%  as.Date('%m/%d/%Y')
+Mx_Service_Lines$file_date %<>%  as.Date('%m/%d/%Y')
+Mx_Service_Lines$date_of_service %<>%  as.Date('%m/%d/%Y')
+Mx_Service_Lines$received_date %<>%  as.Date('%m/%d/%Y')
 
 
 # 2A. Clean enrollment file -----
@@ -138,7 +139,7 @@ Mx_Service_Lines_Migraine_2017 <- Mx_Service_Lines_Migraine %>% filter(date_of_s
 
 
 
-# 4. add in bridging file to claims
+# 4. add in bridging file to claims-----
 
 bridging_file <- read_delim("~/Kantar/Arunajadai, Srikesh (KH) - KHDICT/LINKER/komodo/komodo_bridge_06202019.txt", 
                             "\t", escape_double = FALSE, trim_ws = TRUE)
@@ -153,4 +154,79 @@ Inclusion_Rx_Claims_2017 <- Inclusion_Rx_Claims_2017 %>% left_join(bridging_file
 
 Mx_Service_Lines_Migraine_2017 <- Mx_Service_Lines_Migraine_2017 %>% left_join(bridging_file) # all 79 patients have zKey
 
+
+
+# 5 determine linked patients -----
+load("~/Kantar/Arunajadai, Srikesh (KH) - RWE_US/Lilly_migraine_prevention_161103482_2/PhaseI.RData")
+dat <- dat %>% rename(zkey = zKey)
+
+Linked_Migraine_Header_2017 <- Migraine_Header_2017 %>% left_join(select(dat, zkey, uniqueid, source))
+Linked_Migraine_Header_2017 <- Linked_Migraine_Header_2017 %>% filter(!is.na(source)) # 199 claims, 79 patients
+
+Linked_Inclusion_Rx_Claims <- Inclusion_Rx_Claims_2017 %>% left_join(select(dat, zkey, uniqueid, source))
+Linked_Inclusion_Rx_Claims <- Linked_Inclusion_Rx_Claims %>% filter(!is.na(source)) # 421 claims, 72 patients
+
+Linked_Mx_Service_Line_Migraine_2017 <- Mx_Service_Lines_Migraine_2017 %>%  left_join(select(dat, zkey, uniqueid, source))
+Linked_Mx_Service_Line_Migraine_2017 <- Linked_Mx_Service_Line_Migraine_2017 %>% filter(!is.na(source))
+Linked_Mx_Service_Line_Migraine_2017 <- Linked_Mx_Service_Line_Migraine_2017 %>% filter(claim_id %in% Linked_Migraine_Header_2017$claim_id)
+
+
+#linked header patients
+df %>% group_by(User) %>% do(as.list(colSums(.)))
+Linked_Mx_Service_Line_Migraine_2017 %>% group_by(client_patient_id, claim_id) %>% do.call(as.list(colSums(line_charge))) %>% View()
+
+cost_per_claim <- aggregate(Linked_Mx_Service_Line_Migraine_2017$line_charge, by = list(Linked_Mx_Service_Line_Migraine_2017$claim_id), sum)
+cost_per_claim <- cost_per_claim %>%  rename(claim_id = Group.1 ,
+                                               claim_cost = x)
+
+Linked_Mx_Service_Line_Migraine_2017 <- Linked_Mx_Service_Line_Migraine_2017 %>% left_join(cost_per_claim)
+
+Linked_Migraine_Header_2017 <- Linked_Migraine_Header_2017 %>%  left_join(cost_per_claim)
+
+
+# df <- df %>%
+#   group_by(card_id) %>%
+#   arrange(purchase_date) %>%
+#   mutate(diff = purchase_date - lag(purchase_date, default = first(purchase_date))) %>%
+#   mutate(diff = round(diff/86400, digits = 2))
+
+
+Linked_Migraine_Header_2017 <- Linked_Migraine_Header_2017 %>% group_by(client_patient_id) %>% arrange(claim_date) %>% 
+  mutate(date_diff = claim_date - lag(claim_date)) %>% 
+  arrange(client_patient_id, claim_date, date_diff) 
+
+Linked_Migraine_Header_2017$claim <- "m"
+try %>% select(client_patient_id, claim_id, claim_date, date_diff) %>% View()
+
+
+# linked Rx patients
+Linked_Inclusion_Rx_Claims <- Linked_Inclusion_Rx_Claims %>% group_by(client_patient_id) %>% arrange(date_of_service) %>% 
+  mutate(p.date.diff = date_of_service - lag(date_of_service)) %>% 
+  arrange(client_patient_id, date_of_service, p.date.diff)
+
+Linked_Inclusion_Rx_Claims$claim <- "p"
+
+
+# merge header and Rx
+
+Linked_Claims <- Linked_Migraine_Header_2017 %>% 
+  select(client_patient_id, zkey, uniqueid, source, claim_id, claim_date, date_diff, claim) %>% 
+  full_join(select(Linked_Inclusion_Rx_Claims, client_patient_id, zkey, uniqueid, source, claim_id, 
+                  date_of_service, p.date.diff, claim)) %>% 
+  arrange(client_patient_id, zkey, uniqueid, source, claim_date, date_of_service)
+write.xlsx(Linked_Claims, file= "~/Kantar/Arunajadai, Srikesh (KH) - RWE_US/Lilly_migraine_prevention_161103482_2/Linked_Claims.xlsx")
+
+
+Linked_Claims_Inclusion_Identifier <- read_excel("C:/Users/balkaranb/Kantar/Arunajadai, Srikesh (KH) - RWE_US/Lilly_migraine_prevention_161103482_2/Linked_Claims_Inclusion_Identifier.xlsx", 
+                                                 col_types = c("numeric", "numeric", "text", 
+                                                               "text", "text", "date", "text", "text", 
+                                                               "date", "text", "numeric", "text"))
+
+MG <- Linked_Claims_Inclusion_Identifier %>% filter(Keep == 1) # 541 claims
+MG$client_patient_id %>% n_distinct() # 73 patients
+MG$zkey %>% n_distinct() # 73 patients
+
+
+
+save(MG, file = "~/Kantar/Arunajadai, Srikesh (KH) - RWE_US/Lilly_migraine_prevention_161103482_2/PhaseII.RData")
 
