@@ -18,10 +18,10 @@ library(kollekt)
 options(scipen = 999)
 
 load("~/Kantar/Arunajadai, Srikesh (KH) - RWE_US/Lilly_migraine_prevention_161103482_2/PhaseII.RData")
-load("~/Kantar/Arunajadai, Srikesh (KH) - RWE_US/Lilly_migraine_prevention_161103482_2/PhaseI.RData")
+load("~/Kantar/Arunajadai, Srikesh (KH) - RWE_US/Lilly_migraine_prevention_161103482_2/PhaseI_clean.RData")
 
-dat <- dat %>% rename(zkey = zKey)
-linked <- dat %>% filter(zkey %in% MG$zkey)
+dat_clean <- dat_clean %>% rename(zkey = zKey)
+linked <- dat_clean %>% filter(zkey %in% MG$zkey)
 
 try2 <- try %>% left_join(select(MG, client_patient_id, zkey, Criteria))
 
@@ -34,7 +34,7 @@ linked <- linked %>% select(zkey, source, MGDX, eligible_comb, eli_not_eli, male
                # WPAI
                WPPCTWRK, WPIMPAIR, WPACTIMP, WPWRKIMP,
                # Diagnosis
-               MGDXY, MGDXDR, 
+               MGDXY, MGDXDR, MGYES, 
                # Migraines
                MGFQ1M, MGFQ6M, MGSV, MGSVRX, MGSVNRX, MGMC, MGTPHD, MGHIT, 
                # Symptoms 
@@ -95,7 +95,7 @@ linked <- linked %>% select(zkey, source, MGDX, eligible_comb, eli_not_eli, male
                 # health habits
                Smoke, HHSMK, Alcohol, HHALCQ, Exercise, HHEX,
                BMI_R, BMI_CAT)
-               
+              
                
 # get neurologist visits DONE 
 # recalculate costs?? check with shonda
