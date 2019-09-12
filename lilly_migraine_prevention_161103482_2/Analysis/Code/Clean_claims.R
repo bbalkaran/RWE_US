@@ -94,7 +94,7 @@ Migraine_Header <- Mx_Header %>% filter(client_patient_id %in% Enrollment_File$c
 
 Migraine_Header_2017 <- Migraine_Header %>% filter(claim_date >= "2017-01-01" & claim_date <= "2017-12-31" )
 Migraine_Header_2017$client_patient_id %>% n_distinct()
-  # 185 claims,  68 patients
+  # 186 claims,  68 patients
 
 # check with Jack's file 
 JR_Med <- read_csv("~/Kantar/Arunajadai, Srikesh (KH) - RWE_US/Lilly_migraine_prevention_161103482_2/Migraine_Prev_cohort_Medical_JR.csv", 
@@ -168,7 +168,7 @@ JR_Pharm <- read_csv("~/Kantar/Arunajadai, Srikesh (KH) - RWE_US/Lilly_migraine_
                                       patient_dob = col_date(format = "%m/%d/%Y"), 
                                       timestamp_authorized = col_datetime(format = "%m/%d/%Y %H:%M")))   
 
-Check_pharm <- JR_Pharm %>% filter(!client_patient_id %in% Inclusion_Rx_Claims_2017$client_patient_id)
+Check_pharm <- JR_Pharm %>% filter(!client_patient_id %in% Enrollment_File$client_patient_id)
 
 Check_NDCs <- JR_Pharm %>% filter(! ndc11 %in% inclusion_meds$code | !ndc11 %in% migraine_NDCs$concept_code)
 
@@ -203,13 +203,13 @@ Mx_Service_Lines_Migraine_2017 <- Mx_Service_Lines_Migraine_2017 %>% left_join(b
 load("~/Kantar/Arunajadai, Srikesh (KH) - RWE_US/Lilly_migraine_prevention_161103482_2/PhaseI_clean.RData")
 
 
-Linked_Migraine_Header_2017 <- Migraine_Header_2017 %>% left_join(select(dat_clean, zkey, source)) # 185 claims, 68 patients
-Linked_Migraine_Header_2017 <- Linked_Migraine_Header_2017 %>% filter(!is.na(source)) # 199 claims, 79 patients
+Linked_Migraine_Header_2017 <- Migraine_Header_2017 %>% filter(zkey %in% dat_clean$zkey)  # 12866 claims, 65 patients
+Linked_Migraine_Header_2017 <- Linked_Migraine_Header_2017 %>% filter(!is.na(source)) # 174 claims, 64 patients
 
-Linked_Inclusion_Rx_Claims <- Inclusion_Rx_Claims_2017 %>% left_join(select(dat, zkey, uniqueid, source))
-Linked_Inclusion_Rx_Claims <- Linked_Inclusion_Rx_Claims %>% filter(!is.na(source)) # 421 claims, 72 patients
+Linked_Inclusion_Rx_Claims <- Inclusion_Rx_Claims_2017 %>% right_join(select(dat_clean, zkey, source)) # 382 claims, 64 patients
+Linked_Inclusion_Rx_Claims <- Linked_Inclusion_Rx_Claims %>% filter(!is.na(source)) # 372 claims, 62 patients
 
-Linked_Mx_Service_Line_Migraine_2017 <- Mx_Service_Lines_Migraine_2017 %>%  left_join(select(dat, zkey, uniqueid, source))
+Linked_Mx_Service_Line_Migraine_2017 <- Mx_Service_Lines_Migraine_2017 %>%  left_join(select(dat_clean, zkey,  source))
 Linked_Mx_Service_Line_Migraine_2017 <- Linked_Mx_Service_Line_Migraine_2017 %>% filter(!is.na(source))
 Linked_Mx_Service_Line_Migraine_2017 <- Linked_Mx_Service_Line_Migraine_2017 %>% filter(claim_id %in% Linked_Migraine_Header_2017$claim_id)
 
@@ -239,7 +239,7 @@ Linked_Migraine_Header_2017 <- Linked_Migraine_Header_2017 %>% group_by(client_p
   arrange(client_patient_id, claim_date, date_diff) 
 
 Linked_Migraine_Header_2017$claim <- "m"
-try %>% select(client_patient_id, claim_id, claim_date, date_diff) %>% View()
+Linked_Migraine_Header_2017 %>% select(client_patient_id, claim_id, claim_date, date_diff) %>% View()
 
 
 # linked Rx patients
