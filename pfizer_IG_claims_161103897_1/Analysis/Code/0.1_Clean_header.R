@@ -65,6 +65,7 @@ rx_sample2  <- rx_sample %>% group_by(patient_id) %>%
   mutate(IG_NDC_visit = case_when(NDC %in% NDCs ~ 1,
                                   TRUE ~ 0)) %>% ungroup()
 
+
 # all have IG claims 
 
 
@@ -77,13 +78,18 @@ header2[header2 == ""]<- NA
 
 service <- fread('C:/Users/balkaranb/OneDrive - Kantar/Projects/Pfizer IG/Data/service_sample.csv', header = T, sep = ',')
 
-service2 <- service %>%  select(patientid, received_date, claim_id, service_to, service_from, 
+header3 <- header2 %>% filter(claim_id %in% service2$claim_id) %>% select(claim_id, patient_id)
+
+service2 <- service %>% left_join() %>%  select(patientid, received_date, claim_id, service_to, service_from, 
                                 ndc_code, service_line_number, procedure, units, 
                                 date_of_service,place_of_service, rendering_prov_npi, 
                                 purchased_service_npi, service_facility_npi, 
                                 supervising_prov_npi, ordering_pr_npi)
+
+med <- header3 %>% left_join(service2)
+med[med == ""] <- NA
 service2[service2 == ""]<- NA
-service2 <- service2 %>% group_by(patient_id) %>% 
+med2 <- med %>% group_by(patient_id) %>% 
   arrange(patient_id, date_of_service) %>% 
   mutate(NewPt_id = group_indices()) %>% ungroup() %>% 
   group_by(NewPt_id, as.character(date_of_service))%>% 
@@ -91,10 +97,13 @@ service2 <- service2 %>% group_by(patient_id) %>%
   group_by(NewPt_id, Visit_id) %>%  
   mutate(Visit_type = case_when(ndc_code %in% NDCs & is.na(procedure) ~ "IG_NDC_Visit",
                                 procedure %in% IG_jcodes & ndc_code %in% NDCs ~ "IG_J_NDC_Visit",
-                                procedure %in% IG_jcodes & is.na(ndc_codes) ~"Unspedified Jcode visit",
-                                procedure %notin% IG_jcodes & ndc_code %notin% NDCs ~ "non_IG_visit")) %>% 
-  ungroup()
+                                procedure %in% IG_jcodes & is.na(ndc_code) ~"Unspedified Jcode visit",
+                                (procedure %notin% IG_jcodes) & (ndc_code %notin% NDCs) ~ "non_IG_visit")) %>% 
+  ungroup() 
+
+med3 <- med2 %>% filter(!is.na(patient_id))
  
+med4 <- med3 %>% select(patient_id, NewPt_id, Visit_id, Visit_type) %>% distinct() 
 
 
 try2 <- try %>% mutate(attending_npi = as.character(attending_npi),
@@ -116,3 +125,30 @@ try5 <- try4 %>% group_by(NewPt_id, as.character(claim_date)) %>% mutate(Visit_i
 save(try5, file = "C:/Users/balkaranb/OneDrive - Kantar/Projects/Pfizer IG/Data/Clean/Visits.RData")
                
 #save(service2, file = "~/OneDrive - Kantar/Projects/Pfizer IG/Data/Clean/Service.RData")
+
+
+service <- fread('read_csv("D:/Kantar_Health_Division/Pfizer_IG_Claims_161103897_1/_sample.csv")', header = T, sep = ',')
+
+service2 <- service %>%  select(patientid, received_date, claim_id, service_to, service_from, 
+                                ndc_code, service_line_number, procedure, units, 
+                                date_of_service,place_of_service, rendering_prov_npi, 
+                                purchased_service_npi, service_facility_npi, 
+                                supervising_prov_npi, ordering_pr_npi)
+service2[service2 == ""]<- NA
+service2 <- service2 %>% group_by(patientid) %>% 
+  arrange(patientid, date_of_service) %>% 
+  mutate(NewPt_id = group_indices()) %>% ungroup() %>% 
+  group_by(NewPt_id, as.character(date_of_service))%>% 
+  mutate(Visit_id = group_indices()) %>% ungroup() %>% 
+  group_by(NewPt_id, Visit_id) %>%  
+  mutate(Visit_type = case_when(ndc_code %in% NDCs & is.na(procedure) ~ "IG_NDC_Visit",
+                                procedure %in% IG_jcodes & ndc_code %in% NDCs ~ "IG_J_NDC_Visit",
+                                procedure %in% IG_jcodes & is.na(ndc_codes) ~"Unspedified Jcode visit",
+                                procedure %notin% IG_jcodes & ndc_code %notin% NDCs ~ "non_IG_visit")) %>% 
+  ungroup()
+
+
+
+
+# Merge Header and service
+
