@@ -13,6 +13,8 @@ library(tidyverse)
 library(readxl)
 library(lubridate)
 library(data.table)
+library(multidplyr)
+library(doParallel)
 `%notin%` = function(x,y) !(x %in% y)
 # The Claims Header file has the admin and discharge date in it.  That makes it a whole lot easier.  You only need to include for the first round of analysis, for each IG treatment claim:
 #   •	The IG treatment claim
@@ -72,11 +74,19 @@ rx_sample2  <- rx_sample %>% group_by(patient_id) %>%
 
 #save(rx_sample2, file = "~/OneDrive - Kantar/Projects/Pfizer IG/Data/Clean/Pharmacy_claims.RData")
           
-load("C:/Users/balkaranb/OneDrive - Kantar/Projects/Pfizer IG/Data/Clean/Header.RData")
+load("C:/Users/balkaranb/OneDrive - Kantar/Projects/Pfizer IG/Data/Clean/Med_merged.RData")
 header2[header2 == ""]<- NA
+service2[service2 == ""]<- NA
 
 
-service <- fread('C:/Users/balkaranb/OneDrive - Kantar/Projects/Pfizer IG/Data/service_sample.csv', header = T, sep = ',')
+
+# service2$rendering_prov_npi <- service2$rendering_prov_npi %>% as.character()
+# service2$service_facility_npi <- service2$service_facility_npi %>% as.character()
+# service2$ordering_pr_npi <- service2$ordering_pr_npi %>% as.character()
+# service2$referring_pr_npi <- service2$referring_pr_npi %>% as.character()
+
+
+#service <- fread('C:/Users/balkaranb/OneDrive - Kantar/Projects/Pfizer IG/Data/service_sample.csv', header = T, sep = ',')
 
 header3 <- header2 %>% filter(claim_id %in% service2$claim_id) %>% select(claim_id, patient_id)
 
@@ -86,20 +96,38 @@ service2 <- service %>% left_join() %>%  select(patientid, received_date, claim_
                                 purchased_service_npi, service_facility_npi, 
                                 supervising_prov_npi, ordering_pr_npi)
 
-med <- header3 %>% left_join(service2)
-med[med == ""] <- NA
-service2[service2 == ""]<- NA
-med2 <- med %>% group_by(patient_id) %>% 
+med <- header2 %>% left_join(service2)
+med$claim_date <- med$claim_date %>% as.Date("%m/%d/%Y")
+med$admission_date <- med$admission_date %>% as.Date("%m/%d/%Y")
+med$claim_date <- med$claim_date %>% as.Date("%m/%d/%Y")
+med$service_from %<>% as.Date("%Y-%m-%d")
+med$service_to %<>% as.Date("%Y-%m-%d")
+
+save(med, file = "C:/Users/balkaranb/OneDrive - Kantar/Projects/Pfizer IG/Data/Clean/Med_merged.RData")
+
+med_group <- 
+
+
+med <- med %>% group_by(patient_id) %>% 
   arrange(patient_id, date_of_service) %>% 
-  mutate(NewPt_id = group_indices()) %>% ungroup() %>% 
+  mutate(NewPt_id = group_indices()) %>% ungroup() 
+
+
+
+med <- med %>% 
   group_by(NewPt_id, as.character(date_of_service))%>% 
-  mutate(Visit_id = group_indices()) %>% ungroup() %>% 
+  mutate(Visit_id = group_indices()) %>% ungroup() 
+
+med <- med %>% 
   group_by(NewPt_id, Visit_id) %>%  
   mutate(Visit_type = case_when(ndc_code %in% NDCs & is.na(procedure) ~ "IG_NDC_Visit",
                                 procedure %in% IG_jcodes & ndc_code %in% NDCs ~ "IG_J_NDC_Visit",
                                 procedure %in% IG_jcodes & is.na(ndc_code) ~"Unspedified Jcode visit",
                                 (procedure %notin% IG_jcodes) & (ndc_code %notin% NDCs) ~ "non_IG_visit")) %>% 
   ungroup() 
+
+save(med, file = "C:/Users/balkaranb/OneDrive - Kantar/Projects/Pfizer IG/Data/Clean/Visits.RData")
+
 
 med3 <- med2 %>% filter(!is.na(patient_id))
  
@@ -110,9 +138,7 @@ try2 <- try %>% mutate(attending_npi = as.character(attending_npi),
                         Kantar_npi = case_when(is.na(attending_npi) ~ billing_pr_npi,
                                        TRUE ~ attending_npi))
 
-try2$claim_date <- try2$claim_date %>% as.Date("%Y-%m-%d")
-try2$admission_date <- try2$admission_date %>% as.Date("%Y-%m-%d")
-try2$claim_date <- try2$claim_date %>% as.Date("%Y-%m-%d")
+
 
 try3 <- try2 %>% rename(NPI = Kantar_npi) %>% left_join(NPIregistry) %>% arrange(patient_id, claim_id, claim_date)
 

@@ -18,6 +18,8 @@
 
 library(tidyverse)
 library(data.table)
+library(doParallel)
+cluster <- makeCluster(detectCores())
 
 Dir <- list.files()
 paths<- lapply(Dir, function(x){paste("C:/Users/balkaranb/OneDrive - Kantar/Projects/Pfizer IG/Data/split/", x, sep = "")})
@@ -40,14 +42,20 @@ save(header2, file = "C:/Users/balkaranb/OneDrive - Kantar/Projects/Pfizer IG/Da
 Dir <- list.files("C:/Users/balkaranb/OneDrive - Kantar/Projects/Pfizer IG/Data/Sample_split/")
 paths<- lapply(Dir, function(x){paste("C:/Users/balkaranb/OneDrive - Kantar/Projects/Pfizer IG/Data/Sample_split/", 
                                       x, sep = "")})
-service <- lapply(paths, function(x) {
-  fread(file = x, select = c("claim_id", "service_line", "service_from", "service_to", "ndc_code", "procedure", "modifier_1", "modifier_2",
-                             "modifier_3", "modifier_4", "date_of_service", "place_of_service", "rendering_prov_npi",
-                             "service_facility_npi", "supervising_prov_npi", "ordering_pr_npi", "referring_pr_npi"))})
-
-
+service <- parLapply(cl= cluster, paths, function(x) {data.table::fread(file = x, select = c("claim_id", "service_line", "service_from", 
+                                                                                             "service_to", "ndc_code", "procedure",  
+                             "date_of_service", "place_of_service", "rendering_prov_npi",
+                             "service_facility_npi", "ordering_pr_npi", "referring_pr_npi"))})
+stopCluster(cluster)
 service2 <- plyr::ldply(service, data.table)
 
+service_npis <- select(service2, claim_id, rendering_prov_npi, service_facility_npi, ordering_pr_npi, referring_pr_npi)
+service2 <- service2 %>% select(-rendering_prov_npi, -service_facility_npi, -ordering_pr_npi, -referring_pr_npi)
+
+save(service2, file = "C:/Users/balkaranb/OneDrive - Kantar/Projects/Pfizer IG/Data/Clean/Service2.RData")
+
+
+save(service_npis, file = "C:/Users/balkaranb/OneDrive - Kantar/Projects/Pfizer IG/Data/Clean/Service_NPIs.RData")
 
 
 
