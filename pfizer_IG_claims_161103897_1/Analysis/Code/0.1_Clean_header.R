@@ -126,8 +126,6 @@ med <- med %>%
                                 (procedure %notin% IG_jcodes) & (ndc_code %notin% NDCs) ~ "non_IG_visit")) %>% 
   ungroup() 
 
-save(med, file = "C:/Users/balkaranb/OneDrive - Kantar/Projects/Pfizer IG/Data/Clean/Visits.RData")
-
 
 med3 <- med2 %>% filter(!is.na(patient_id))
  
