@@ -21,7 +21,7 @@ library(descr)
 
 load("C:/Users/balkaranb/OneDrive - Kantar/Projects/Pfizer IG/Data/Clean/IG_NDC_NPI.RData")
 load("C:/Users/balkaranb/OneDrive - Kantar/Projects/Pfizer IG/Data/Clean/NPI_registry.RData")
-NPI_xwalk <- fromJSON("https://data.cms.gov/resource/j75i-rw8y.json") %>% mutate_if(is.character, str_trim)
+NPI_xwalk <- fromJSON("https://data.cms.gov/resource/j75i-rw8y.json")%>% mutate_if(is.character, str_trim)
 
 dat1 <- NPIregistry %>% select(NPI, `Entity Type Code`, provider_taxonomy_code)%>% rename(attending_npi = NPI) %>%
   right_join(IG_NDC2) %>% mutate_if(is.character,str_trim) %>%
