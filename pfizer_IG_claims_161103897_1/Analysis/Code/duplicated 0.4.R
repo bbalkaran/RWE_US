@@ -5,8 +5,8 @@
 #  Author: Bridget Balkaran
 #  Project: 161103897-1
 #  Project Manager: Martine Maculaitis
-#  Date Created: 9/12/19
-#  Date Edited: 9/12/19
+#  Date Created: 11/6/19
+#  Date Edited: 11/6/19
 ########################################################
 
 
@@ -23,9 +23,38 @@ med <- med %>% mutate(NPI = case_when(is.na(billing_pr_npi) ~ attending_npi,
                                         is.na(attending_npi) ~ facility_npi,
                                       TRUE ~ billing_pr_npi))
 med$NPI %>% is.na() %>% table()
-NPIs <- NPIregistry %>% filter(NPI %in% med$NPI)
+NPIs <- NPIregistry %>% filter(NPI %in% med$NPI) %>% na.omit() %>% distinct()
 
 NPIs$provider_taxonomy_desc <- NPIs$provider_taxonomy_desc %>% 
   str_replace(pattern = "/ ", replacement = " ") %>%
   str_replace(pattern = "/", replacement = " ") %>%
-  str_replace_all(pattern = " & ", replacement = " and ") 
+  str_replace_all(pattern = " & ", replacement = " and ") %>%
+  str_remove_all(pattern = ",") 
+
+
+
+NPIs <- NPIs %>% distinct()
+
+b <- NPIs %>% group_by(NPI) %>% filter(n()>1)
+b$provider_taxonomy_code %>% n_distinct()
+b$provider_taxonomy_desc %>% n_distinct()
+
+# collapse these into broader categories 
+b$provider_taxonomy_code %>% unique()
+b$provider_taxonomy_desc %>% unique()
+
+Collapse_these <- b %>% ungroup %>% select(-NPI, -`Entity Type Code`) %>% distinct()
+colnames(Collapse_these) <-c("Provider Taxonomy Code", "Provider Taxonomy Description")
+
+openxlsx::write.xlsx(Collapse_these, 
+                     "C:/Users/balkaranb/OneDrive - Kantar/Projects/Pfizer IG/NPI Taxonomy Descriptions to Collapse.xlsx")
+
+
+NPIs %>% mutate(provider_taxonomy_code = 
+                  case_when(provider_taxonomy_code == "207L00000X" ~ "Allopathic and Osteopathic Physicians Anesthesiology",
+                            provider_taxonomy_code == "2084P0800X" ~ "Allopathic and Osteopathic Physicians Psychiatry",
+                            provider_taxonomy_code == "207RH0002X" ~ "")
+)
+
+
+
