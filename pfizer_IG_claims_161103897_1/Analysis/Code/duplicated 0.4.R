@@ -28,6 +28,7 @@ NPIs <- NPIregistry %>% filter(NPI %in% med$NPI) %>% na.omit() %>% distinct()
 NPIs$provider_taxonomy_desc <- NPIs$provider_taxonomy_desc %>% 
   str_replace(pattern = "/ ", replacement = " ") %>%
   str_replace(pattern = "/", replacement = " ") %>%
+  str_replace(pattern = "/", replacement = " ") %>%
   str_replace_all(pattern = " & ", replacement = " and ") %>%
   str_remove_all(pattern = ",") 
 
@@ -50,11 +51,16 @@ openxlsx::write.xlsx(Collapse_these,
                      "C:/Users/balkaranb/OneDrive - Kantar/Projects/Pfizer IG/NPI Taxonomy Descriptions to Collapse.xlsx")
 
 
-NPIs %>% mutate(provider_taxonomy_code = 
+NPIs <- NPIs %>% mutate(provider_taxonomy_desc = 
                   case_when(provider_taxonomy_code == "207L00000X" ~ "Allopathic and Osteopathic Physicians Anesthesiology",
                             provider_taxonomy_code == "2084P0800X" ~ "Allopathic and Osteopathic Physicians Psychiatry",
-                            provider_taxonomy_code == "207RH0002X" ~ "")
-)
+                            provider_taxonomy_code == "207RH0002X" ~ "Internal Medicine Hospice and Palliative Medicine",
+                            provider_taxonomy_code == "2084A0401X" ~ "Allopathic and Osteopathic Physicians Psychiatry and Neurology",
+                            provider_taxonomy_code == "207QH0002X" ~ 
+                              "Allopathic and Osteopathic Physicians Family Medicine Hospice and Palliative Medicine",
+                            provider_taxonomy_code == "2084H0002X" ~ 
+                              "Allopathic and Osteopathic Physicians Psychiatry and Neurology Hospice and Palliative Medicine",
+                            TRUE ~ provider_taxonomy_desc))
 
-
+save(NPIs, file = "C:/Users/balkaranb/OneDrive - Kantar/Projects/Pfizer IG/Data/Clean/NPI_registry_deduped.RData")
 

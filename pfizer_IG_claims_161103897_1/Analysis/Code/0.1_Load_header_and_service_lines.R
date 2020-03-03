@@ -21,6 +21,8 @@ library(data.table)
 library(doParallel)
 cluster <- makeCluster(detectCores())
 
+
+
 Dir <- list.files()
 paths<- lapply(Dir, function(x){paste("C:/Users/balkaranb/OneDrive - Kantar/Projects/Pfizer IG/Data/split/", x, sep = "")})
 header <- lapply(paths, function(x) {
