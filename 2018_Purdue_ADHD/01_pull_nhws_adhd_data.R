@@ -1,7 +1,7 @@
 library(kollekt)
 
 # LOAD NHWS DATA
-setwd(getPath('NHWS_US'))
+setwd(kollekt::getPath('NHWS_US'))
 ptm <- proc.time()
 load("nhws_2015.RData")
 load("nhws_2016.RData")
@@ -9,6 +9,8 @@ load("nhws_2017.RData")
 load("nhws_2018.RData")
 load("nhws_char.RData")
 proc.time() - ptm
+
+
 
 
 mh_disorders <- c("Anxiety","Depression","Attention","Bipolar disorder","Panic disorder",
@@ -22,7 +24,7 @@ my_vars <- c("ADHYES","ADYES","MCS", "PCS", "SF6D_R2", "EQ5DINDEX", "EQ5D6","TRA
             "GADFN","GADWR","GADWDT","GADTR","GADCST","GADAI","GADPHA",
             "HHSMKUP12NG","HHSMKUP12NP","HHSMKUP12EC","HHSMKUP12NC","HHSMKUP12NA","HHSMKTME",
             "RUIWB","RUIAP","RUHWB","RUHAP","RUEWB","RUEAP","RUWRT","RUNON",
-            "TOTIN_R","HHLBS_R")
+            "TOTIN_R","HHLBS_R","WPPRD","WPWRK","WPMIS")
 
 ru_vars <- searchNHWS('code',pattern = list(pattern  = "^RU..6Q$"))
 ru_vars_2 <- gsub("6Q","",ru_vars$variable)
