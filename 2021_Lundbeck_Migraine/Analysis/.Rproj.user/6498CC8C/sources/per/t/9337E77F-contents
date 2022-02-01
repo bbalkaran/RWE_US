@@ -1,0 +1,1601 @@
+#########################################################
+#  Script: 2_MV_MHD_Models.R
+#  Purpose: Multivariable models
+#  Data file: eu_mhd_sub20.sav
+#  Author: Jacquelyn Bialo
+#  Project: 161104804
+#  Project Manager: Dena Jaffe
+#  Date Created: 11/17/2021
+#  Date Edited: 11/18/2021
+########################################################
+
+
+library(haven)
+library(lme4)
+library(lmtest)
+library(lmerTest)
+library(emmeans)
+library(glmmTMB)
+library(dplyr)
+library(forcats)
+library(ggeffects)
+library(beepr)
+options(digits=6,
+        scipen =  999)
+
+load("./Data/MVdata.RData")
+
+# eu_mhd_sub <- read_sav("C:/Users/BB089264/Cerner Corporation/Lundbeck Migraine Prevalence and MOH Global NHWS - General (1)/7 Data and syntax/EU2020_Clean_w_Costs_11.15.sav")
+
+#HRQoL-----
+##MHD -- Categorical- MCS -----
+mcs <-lmer(MCS ~ HDdays.fac + 
+             #Age_grp +
+             Age_grp_3cat +
+             Sex_fac + 
+             Marital_fac +
+             Education_fac + 
+             Income_3Cat +
+             employ.fac +
+             BMI_Cat +
+             smoke.fac +
+             alcohol.fac + 
+             exercise.fac + 
+             CCI.fac + 
+             (1|COUNTRY), 
+           data = eu_mhd_sub)
+summary(mcs)
+confint(mcs)
+# check fit
+plot(simulateResiduals(mcs))
+car::vif(mcs)
+
+start <- Sys.time()
+mcs_means <- emmeans(mcs, "HDdays.fac", rg.limit = 10000000, 
+                     type = "response",
+                     pbkrtest = 3985)
+stop <- Sys.time()
+print(stop - start)
+beep()
+save(mcs, mcs_means, file = "./MHD_cat_results/mcs.RData")
+
+library(ggplot2)
+library(ggeffects)
+
+mcs_country_means <- ggpredict(mcs, terms = c("HDdays.fac", "COUNTRY"), type = "re")
+
+
+##MHD -- PCS (lmer)----
+
+pcs <-lmer(PCS ~ HDdays.fac +
+             #Age_grp +
+             Age_grp_3cat +
+             Sex_fac + 
+             Marital_fac +
+             Education_fac + 
+             Income_3Cat +
+             employ.fac +
+             BMI_Cat +
+             smoke.fac +
+             alcohol.fac + 
+             exercise.fac +
+             CCI.fac +
+             (1|COUNTRY), 
+           data = eu_mhd_sub)
+
+summary(pcs)
+confint(pcs)
+# check fit
+plot(simulateResiduals(pcs))
+car::vif(pcs)
+start <- Sys.time()
+pcs_means <- emmeans(pcs, "HDdays.fac", rg.limit = 10000000, 
+                     type = "response",
+                     pbkrtest = 3985)
+stop <- Sys.time()
+print(stop - start)
+beep()
+save(pcs, pcs_means, file = "./MHD_cat_results/pcs.RData")
+
+pcs_country_means <- ggpredict(pcs, terms = c("HDdays.fac", "COUNTRY"), type = "re")
+
+
+##MHD -- SF-6D (lmer)---
+#SF Utility Score
+sf_util <-lmer(SF6D_R2 ~ HDdays.fac + 
+                 #Age_grp +
+                 Age_grp_3cat +
+                 Sex_fac + 
+                 Marital_fac +
+                 Education_fac +
+                 Income_3Cat +
+                 employ.fac +
+                 BMI_Cat +
+                 smoke.fac +
+                 alcohol.fac + 
+                 exercise.fac +
+                 CCI.fac +
+                 (1|COUNTRY),
+               data = eu_mhd_sub)
+
+summary(sf_util)
+confint(sf_util)
+# check fit
+plot(simulateResiduals(sf_util))
+car::vif(sf_util)
+
+start <- Sys.time()
+sf_util_means <- emmeans(sf_util, "HDdays.fac", rg.limit = 10000000, 
+                         type = "response",
+                         pbkrtest = 3985)
+stop <- Sys.time()
+print(stop - start)
+beep()
+save(sf_util, sf_util_means, file = "./MHD_cat_results/sf_util.RData")
+
+sf_util_country_means <- ggpredict(sf_util, terms = c("HDdays.fac", "COUNTRY"), type = "re")
+
+##MHD -- EQ Index Value (lmer)----
+#EQ5D Index Value
+e5d_IV <-lmer(EQ5DINDEX ~ HDdays.fac + 
+                #Age_grp + 
+                Age_grp_3cat +
+                Sex_fac + 
+                Marital_fac +
+                Education_fac +
+                Income_3Cat +
+                employ.fac +
+                BMI_Cat +
+                smoke.fac +
+                alcohol.fac + 
+                exercise.fac +
+                CCI.fac +
+                (1|COUNTRY), 
+              data = eu_mhd_sub)
+
+summary(e5d_IV)
+confint(e5d_IV)
+# check fit
+plot(simulateResiduals(e5d_IV))
+car::vif(e5d_IV)
+
+start <- Sys.time()
+e5d_IV_means <- emmeans(e5d_IV, "HDdays.fac", rg.limit = 10000000, 
+                        type = "response",
+                        pbkrtest = 3985)
+stop <- Sys.time()
+print(stop - start)
+beep()
+save(e5d_IV, e5d_IV_means, file = "./MHD_cat_results/e5d_IV.RData")
+
+e5d_IV_country_means <- ggpredict(e5d_IV, terms = c("HDdays.fac", "COUNTRY"), type = "re")
+
+##MHD -- EQ VAS (lmer)----
+#EQ5D VAS
+e5d_VAS <-lmer(EQ5D6 ~ HDdays.fac + 
+                 #Age_grp + 
+                 Age_grp_3cat +
+                 Sex_fac + 
+                 Marital_fac +
+                 Education_fac +
+                 Income_3Cat +
+                 employ.fac +
+                 BMI_Cat +
+                 smoke.fac +
+                 alcohol.fac + 
+                 exercise.fac +
+                 CCI.fac +
+                 (1|COUNTRY), 
+               data = eu_mhd_sub)
+
+summary(e5d_VAS)
+confint(e5d_VAS)
+# check fit
+plot(simulateResiduals(e5d_VAS))
+car::vif(e5d_VAS)
+
+start <- Sys.time()
+e5d_VAS_means <- emmeans(e5d_VAS, "HDdays.fac", rg.limit = 10000000, 
+                         type = "response",
+                         pbkrtest = 3985)
+stop <- Sys.time()
+print(stop - start)
+beep()
+save(e5d_VAS, e5d_VAS_means, file = "./MHD_cat_results/e5d_VAS.RData")
+
+e5d_VAS_country_means <- ggpredict(e5d_VAS, terms = c("HDdays.fac", "COUNTRY"), type = "re")
+
+##MHD -- MIDAS (glmm) ---
+
+library(lme4) #linear mixed models
+library(lmtest)
+library(lmerTest)
+library(glmmTMB) # generalized linear mixed models
+library(DHARMa) # checking residuals
+library(MASS)
+library(DescTools)
+library(car)  # VIF 
+library(emmeans) # adjusted means
+library(magrittr)
+
+library(cramer)
+library(creditmodel)
+library(openxlsx)
+library(tidyverse)
+library(tidylog)
+options(scipen=999)
+
+midas <- glmmTMB(MIDAS_dich ~ HDdays.fac + 
+                   #Age_grp + 
+                   Age_grp_3cat + #false convergence
+                   Sex_fac + #non-positive-definite Hessian matrix; false convergence 
+                   Marital_fac + #false convergence
+                   Education_fac + #false convergence
+                   Income_3Cat + #false convergence
+                   employ.fac + #false convergence
+                   BMI_Cat + #false convergence
+                   smoke.fac + #non-positive-definite Hessian matrix; false convergence
+                   alcohol.fac + #non-positive-definite Hessian matrix; false convergence
+                   exercise.fac + #false convergence
+                   CCI.fac + #false convergence
+                   (1|COUNTRY), #converged -- does error come from COUNTRY only having 1 level; false convergence with COUNTRY.fac
+                 data=eu_mhd_sub,
+                 family = binomial)
+summary(midas)
+exp(confint(midas))
+# check fit
+plot(simulateResiduals(midas))
+car::vif(midas)
+
+start <- Sys.time()
+midas_means <- emmeans(midas, "HDdays.fac", rg.limit = 10000000, 
+                       type = "response",
+                       pbkrtest = 3985)
+stop <- Sys.time()
+print(stop - start)
+beep()
+save(midas, midas_means, file = "./MHD_cat_results/midas.RData")
+
+midas_country_means <- ggpredict(midas, terms = c("HDdays.fac", "COUNTRY"), type = "re")
+
+# QoL_all_country_means <- rbind(mcs_country_means,
+#                                pcs_country_means,
+#                                sf_util_country_means,
+#                                e5d_IV_country_means,
+#                                e5d_VAS_country_means,
+#                                midas_country_means)
+# 
+# write.csv(QoL_all_country_means, "QoL_all_country_means_test.csv")
+
+
+#Mg Frequency -- continuous ----
+
+##MCS -- Continuous (migraine frequency -- MGTPHD)----
+
+mcs_con <-lmer(MCS ~ MGTPHD +
+                 Age_grp_3cat +
+                 Sex_fac + 
+                 Marital_fac +
+                 Education_fac +
+                 Income_3Cat +
+                 employ.fac +
+                 BMI_Cat +
+                 smoke.fac +
+                 alcohol.fac + 
+                 exercise.fac + 
+                 CCI.fac +
+                 (1|COUNTRY), 
+               data = eu_mhd_sub)
+
+summary(mcs_con)
+confint(mcs_con)
+# check fit
+plot(simulateResiduals(mcs_con))
+car::vif(mcs_con)
+
+start <- Sys.time()
+mcs_con_means <- emmeans(mcs_con, "MGTPHD", rg.limit = 10000000, 
+                         type = "response",
+                         pbkrtest = 3985)
+stop <- Sys.time()
+print(stop - start)
+beep()
+save(mcs_con, mcs_con_means, file = "C:/Users/BialoJ/OneDrive - Kantar/Lundbeck Migraine/mcs_con.RData")
+
+mcs_con_country_means <- ggpredict(mcs_con, terms = c("MGTPHD [meansd]", "COUNTRY"), type = "re")
+mean(mcs_con_country_means, na.rm = TRUE)
+
+
+## Mg Frequency -- PCS (lmer)----
+pcs_con <-lmer(PCS ~ MGTPHD + 
+                 #Age_grp + 
+                 Age_grp_3cat +
+                 Sex_fac + 
+                 Marital_fac +
+                 Education_fac +
+                 Income_3Cat +
+                 employ.fac +
+                 BMI_Cat +
+                 smoke.fac +
+                 alcohol.fac + 
+                 exercise.fac +
+                 CCI.fac +
+                 (1|COUNTRY), 
+               data = eu_mhd_sub)
+
+summary(pcs_con)
+confint(pcs_con)
+# check fit
+plot(simulateResiduals(pcs_con))
+car::vif(pcs_con)
+
+start <- Sys.time()
+pcs_con_means <- emmeans(pcs_con, "MGTPHD", rg.limit = 10000000, 
+                         type = "response",
+                         pbkrtest = 3985)
+stop <- Sys.time()
+print(stop - start)
+beep()
+save(pcs_con, pcs_con_means, file = "C:/Users/BialoJ/OneDrive - Kantar/Lundbeck Migraine/pcs_con.RData")
+
+pcs_con_country_means <- ggpredict(pcs_con, terms = c("MGTPHD [meansd]", "COUNTRY"), type = "re")
+
+##Mg Frequency -- SF-6D (lmer)----
+#SF Utility Score
+sf_util_con <-lmer(SF6D_R2 ~ MGTPHD + 
+                     #Age_grp +
+                     Age_grp_3cat +
+                     Sex_fac + 
+                     Marital_fac +
+                     Education_fac +
+                     Income_3Cat +
+                     employ.fac +
+                     BMI_Cat +
+                     smoke.fac +
+                     alcohol.fac + 
+                     exercise.fac +
+                     CCI.fac +
+                     (1|COUNTRY),
+                   data = eu_mhd_sub)
+
+summary(sf_util_con)
+confint(sf_util_con)
+# check fit
+plot(simulateResiduals(sf_util_con))
+car::vif(sf_util_con)
+
+start <- Sys.time()
+sf_util_con_means <- emmeans(sf_util_con, "MGTPHD", rg.limit = 10000000, 
+                             type = "response",
+                             pbkrtest = 3985)
+stop <- Sys.time()
+print(stop - start)
+beep()
+save(sf_util_con, sf_util_con_means, file = "C:/Users/BialoJ/OneDrive - Kantar/Lundbeck Migraine/sf_util_con.RData")
+
+sf_util_con_country_means <- ggpredict(sf_util_con, terms = c("MGTPHD [meansd]", "COUNTRY"), type = "re")
+
+##Mg Frequency -- EQ Index Value (lmer)----
+
+e5d_IV_con <-lmer(EQ5DINDEX ~ MGTPHD + 
+                    #Age_grp + 
+                    Age_grp_3cat +
+                    Sex_fac + 
+                    Marital_fac +
+                    Education_fac +
+                    Income_3Cat +
+                    employ.fac +
+                    BMI_Cat +
+                    smoke.fac +
+                    alcohol.fac + 
+                    exercise.fac +
+                    CCI.fac +
+                    (1|COUNTRY), 
+                  data = eu_mhd_sub)
+
+summary(e5d_IV_con)
+confint(e5d_IV_con)
+# check fit
+plot(simulateResiduals(e5d_IV_con))
+car::vif(e5d_IV_con)
+
+start <- Sys.time()
+e5d_IV_con_means <- emmeans(e5d_IV_con, "MGTPHD", rg.limit = 10000000, 
+                            type = "response",
+                            pbkrtest = 3985)
+stop <- Sys.time()
+print(stop - start)
+beep()
+save(e5d_IV_con, e5d_IV_con_means, file = "C:/Users/BialoJ/OneDrive - Kantar/Lundbeck Migraine/e5d_IV_con.RData")
+
+e5d_IV_con_country_means <- ggpredict(e5d_IV_con, terms = c("MGTPHD [meansd]", "COUNTRY"), type = "re")
+
+##Mg Frequency -- EQ VAS (lmer)----
+#EQ5D VAS
+e5d_VAS_con <-lmer(EQ5D6 ~ MGTPHD + 
+                     #Age_grp + 
+                     Age_grp_3cat +
+                     Sex_fac + 
+                     Marital_fac +
+                     Education_fac +
+                     Income_3Cat +
+                     employ.fac +
+                     BMI_Cat +
+                     smoke.fac +
+                     alcohol.fac + 
+                     exercise.fac +
+                     CCI.fac +
+                     (1|COUNTRY), 
+                   data = eu_mhd_sub)
+
+summary(e5d_VAS_con)
+confint(e5d_VAS_con)
+# check fit
+plot(simulateResiduals(e5d_VAS_con))
+car::vif(e5d_VAS_con)
+
+start <- Sys.time()
+e5d_VAS_con_means <- emmeans(e5d_VAS_con, "MGTPHD", rg.limit = 10000000, 
+                             type = "response",
+                             pbkrtest = 3985)
+stop <- Sys.time()
+print(stop - start)
+beep()
+save(e5d_VAS_con, e5d_VAS_con_means, file = "C:/Users/BialoJ/OneDrive - Kantar/Lundbeck Migraine/e5d_VAS_con.RData")
+
+e5d_VAS_con_country_means <- ggpredict(e5d_VAS_con, terms = c("MGTPHD [meansd]", "COUNTRY"), type = "re")
+
+##Mg Frequency -- MIDAS (glmm)----
+
+midas_con <- glmmTMB(MIDAS_dich ~ MGTPHD + 
+                       #Age_grp + 
+                       Age_grp_3cat +
+                       Sex_fac + 
+                       Marital_fac + 
+                       Education_fac +
+                       Income_3Cat +
+                       employ.fac +
+                       BMI_Cat +
+                       smoke.fac +
+                       alcohol.fac + 
+                       exercise.fac +
+                       CCI.fac +
+                       (1|COUNTRY), 
+                     data=eu_mhd_sub,
+                     family = binomial)
+
+summary(midas_con)
+confint(midas_con)
+# check fit
+plot(res$scaledResiduals)
+res <- resid(midas_con)
+fitt <- fitted(midas_con)
+plot(x = fitt, y = res)
+simulateResiduals(midas_con)
+car::vif(midas_con)
+
+start <- Sys.time()
+midas_con_means <- emmeans(midas_con, "MGTPHD", rg.limit = 10000000, 
+                           type = "response",
+                           pbkrtest = 3985)
+stop <- Sys.time()
+print(stop - start)
+beep()
+save(midas_con, midas_con_means, file = "C:/Users/BialoJ/OneDrive - Kantar/Lundbeck Migraine/midas_con.RData")
+
+midas_con_country_means <- ggpredict(midas_con, terms = c("COUNTRY"), type = "re")
+
+QoL_all_country_means_con <- rbind(mcs_con_country_means,
+                                   pcs_con_country_means,
+                                   sf_util_con_country_means,
+                                   e5d_IV_con_country_means,
+                                   e5d_VAS_con_country_means,
+                                   midas_con_country_means)
+
+write.csv(QoL_all_country_means_con, "QoL_all_country_means_con.csv")
+
+# WPAI -----
+
+##HD groups -- Absenteeism (glmm)-----
+
+##Recode education only for absenteeism
+#Education: okay
+
+# eu_mhd_sub$Education_absent <-dplyr::recode(
+#   as.factor(
+#     eu_mhd_sub$Education_fac),
+#   "1" = "4-year uni degree +",
+#   "2" = "< 4-year uni degree",
+#   "3" = "DNA/DtA" #32
+# )
+# levels(eu_mhd_sub$Education_fac)
+# table(eu_mhd_sub$Education_absent)
+
+abs_dat <- eu_mhd_sub %>% 
+  filter(Education_fac != "DNA/DtA")
+
+# eu_mhd_sub <- eu_mhd_sub[eu_mhd_sub$Education_absent == "4-year uni degree +" | 
+#                            eu_mhd_sub$Education_absent == "< 4-year uni degree", ]
+# eu_mhd_sub$Education_absent <- droplevels(eu_mhd_sub$Education_absent)
+# table(eu_mhd_sub$Education_absent)
+
+absent <- glmmTMB(WPPCTWRK ~ HDdays.fac + 
+                    #Age_grp + 
+                    Age_grp_3cat +
+                    Sex_fac + 
+                    Marital_fac + 
+                    Education_fac + 
+                    Income_3Cat +
+                    #employ.fac +
+                    BMI_Cat +
+                    smoke.fac +
+                    alcohol.fac + 
+                    exercise.fac +
+                    CCI.fac +
+                    (1|COUNTRY), 
+                  data=abs_dat,
+                  family = nbinom2)
+
+summary(absent)
+exp(confint(absent))
+
+# check fit
+plot(simulateResiduals(absent))
+car::vif(absent)
+
+start <- Sys.time()
+absent_means <- emmeans(absent, "HDdays.fac", rg.limit = 10000000, 
+                        type = "response",
+                        pbkrtest = 3985)
+stop <- Sys.time()
+print(stop - start)
+beep()
+save(absent, absent_means, file = "./MHD_cat_results/absent.RData")
+
+absent_country_means <- ggpredict(absent, terms = c("HDdays.fac", "COUNTRY"), type = "re")
+
+##MHD -- Presenteeism (glmm)----
+pres_dat <- eu_mhd_sub %>% 
+  filter( BMI_Cat!= "Unk/DtA")
+
+present <- glmmTMB(WPIMPAIR ~ HDdays.fac + 
+                     #Age_grp + 
+                     Age_grp_3cat +
+                     Sex_fac + 
+                     Marital_fac + 
+                     Education_fac +
+                     Income_3Cat +
+                     #employ.fac +
+                     BMI_Cat +
+                     smoke.fac +
+                     alcohol.fac + 
+                     exercise.fac +
+                     CCI.fac +
+                     (1|COUNTRY), 
+                   data= pres_dat,
+                   family = nbinom2)
+
+summary(present)
+exp(confint(present))
+# check fit
+plot(simulateResiduals(present))
+car::vif(present)
+
+start <- Sys.time()
+present_means <- emmeans(present, "HDdays.fac", rg.limit = 10000000, 
+                         type = "response",
+                         pbkrtest = 3985)
+stop <- Sys.time()
+print(stop - start)
+beep()
+save(present, present_means, file = "./MHD_cat_results/present.RData")
+
+present_country_means <- ggpredict(present, terms = c("HDdays.fac", "COUNTRY"), type = "re")
+
+
+##MHD -- Overall Impairment (glmm)----
+
+overall_impair <- glmmTMB(WPWRKIMP ~ HDdays.fac + 
+                            #Age_grp + 
+                            Age_grp_3cat +
+                            Sex_fac + 
+                            Marital_fac + 
+                            Education_fac +
+                            Income_3Cat +
+                            #employ.fac +
+                            BMI_Cat +
+                            smoke.fac +
+                            alcohol.fac + 
+                            exercise.fac +
+                            CCI.fac +
+                            (1|COUNTRY), 
+                          data=eu_mhd_sub,
+                          family = nbinom2)
+
+summary(overall_impair)
+exp(confint(overall_impair))
+# check fit
+plot(simulateResiduals(overall_impair))
+car::vif(overall_impair)
+
+start <- Sys.time()
+overall_impair_means <- emmeans(overall_impair, "HDdays.fac", rg.limit = 10000000, 
+                                type = "response",
+                                pbkrtest = 3985)
+stop <- Sys.time()
+print(stop - start)
+beep()
+save(overall_impair, overall_impair_means, file = "./MHD_cat_results/overall_impairment.RData")
+
+overall_impair_country_means <- ggpredict(overall_impair, terms = c("HDdays.fac", "COUNTRY"), type = "re")
+
+##MHD -- Activity Impairment (glmm)------
+
+act_impair <- glmmTMB(WPACTIMP ~ HDdays.fac + 
+                        #Age_grp + 
+                        Age_grp_3cat +
+                        Sex_fac + 
+                        Marital_fac + 
+                        Education_fac +
+                        Income_3Cat +
+                        employ.fac +
+                        BMI_Cat +
+                        smoke.fac +
+                        alcohol.fac + 
+                        exercise.fac +
+                        CCI.fac +
+                        (1|COUNTRY), 
+                      data=eu_mhd_sub,
+                      family = nbinom2)
+
+summary(act_impair)
+exp(confint(act_impair))
+# check fit
+plot(simulateResiduals(act_impair))
+car::vif(act_impair)
+
+start <- Sys.time()
+act_impair_means <- emmeans(act_impair, "HDdays.fac", rg.limit = 10000000, 
+                            type = "response",
+                            pbkrtest = 3985)
+stop <- Sys.time()
+print(stop - start)
+beep()
+save(act_impair, act_impair_means, file = "./MHD_cat_results/activity_impairment.RData")
+
+act_impair_country_means <- ggpredict(act_impair, terms = c("HDdays.fac", "COUNTRY"), type = "re")
+
+##Mg Frequency -- Absenteeism (glmm)-----
+
+
+absent_con <- glmmTMB(WPPCTWRK ~ MGTPHD + 
+                        #Age_grp + 
+                        Age_grp_3cat +
+                        Sex_fac + 
+                        Marital_fac + 
+                        Education_fac + 
+                        Income_3Cat +
+                        #employ.fac +
+                        BMI_Cat +
+                        smoke.fac +
+                        alcohol.fac + 
+                        exercise.fac +
+                        CCI.fac +
+                        (1|COUNTRY), 
+                      data=abs_dat,
+                      family = nbinom2)
+
+summary(absent_con)
+exp(confint(absent_con))
+# check fit
+plot(simulateResiduals(absent_con))
+car::vif(absent_con)
+
+start <- Sys.time()
+absent_con_means <- print(emmeans(absent_con, "MGTPHD", rg.limit = 10000000, 
+                                  type = "response",
+                                  pbkrtest = 3985), digits = 4)
+stop <- Sys.time()
+print(stop - start)
+beep()
+save(absent_con, absent_con_means, file = "C:/Users/BialoJ/OneDrive - Kantar/Lundbeck Migraine/absent_con.RData")
+
+absent_con_country_means <- ggpredict(absent_con, terms = c("COUNTRY"), type = "re")
+
+write.csv(absent_con_country_means, "absent_con_country_means.csv")
+
+##Mg Frequency -- Presenteeism (glmm)----
+
+present_con <- glmmTMB(WPIMPAIR ~ MGTPHD +
+                         Age_grp + 
+                         # Age_grp_3cat +
+                          Sex_fac + 
+                          Marital_fac + 
+                          Education_fac +
+                         Income_3Cat +
+                         # #employ.fac +
+                          BMI_Cat +
+                          smoke.fac +
+                          alcohol.fac + 
+                         # exercise.fac +
+                         # CCI.fac +
+                         (1|COUNTRY), 
+                       data=eu_mhd_sub,
+                       family = nbinom2)
+
+summary(present_con)
+exp(confint(present_con))
+# check fit
+plot(simulateResiduals(present_con))
+start <- Sys.time()
+present_con_means <- emmeans(present_con, "MGTPHD", rg.limit = 10000000, 
+                             type = "response",
+                             pbkrtest = 3985)
+stop <- Sys.time()
+print(stop - start)
+beep()
+save(present_con, present_con_means, file = "C:/Users/BialoJ/OneDrive - Kantar/Lundbeck Migraine/present_con.RData")
+
+present_con_country_means <- ggpredict(present_con, terms = c("COUNTRY"), type = "re")
+
+write.csv(present_con_country_means, "present_con_country_means.csv")
+
+##Mg Frequency -- Work Impairment (glmm)-----
+
+overall_impair_con <- glmmTMB(WPWRKIMP ~ MGTPHD + 
+                                #Age_grp + 
+                                Age_grp_3cat +
+                                Sex_fac + 
+                                Marital_fac + 
+                                Education_fac +
+                                Income_3Cat +
+                                #employ.fac +
+                                BMI_Cat +
+                                smoke.fac +
+                                alcohol.fac + 
+                                exercise.fac +
+                                CCI.fac +
+                                (1|COUNTRY), 
+                              data=eu_mhd_sub,
+                              family = nbinom2)
+
+summary(overall_impair_con)
+exp(confint(overall_impair_con))
+# check fit
+plot(simulateResiduals(overall_impair_con))
+start <- Sys.time()
+overall_impair_con_means <- emmeans(overall_impair_con, "MGTPHD", rg.limit = 10000000, 
+                                    type = "response",
+                                    pbkrtest = 3985)
+stop <- Sys.time()
+print(stop - start)
+beep()
+save(overall_impair_con, overall_impair_con_means, file = "C:/Users/BialoJ/OneDrive - Kantar/Lundbeck Migraine/overall_impairment_con.RData")
+
+overall_impair_con_country_means <- ggpredict(overall_impair_con, terms = c("COUNTRY"), type = "re")
+
+write.csv(overall_impair_con_country_means, "overall_impair_con_country_means.csv")
+
+##Mg Frequency -- Activity Impairment (glmm)----
+
+act_impair_con <- glmmTMB(WPACTIMP ~ MGTPHD + 
+                            #Age_grp + 
+                            Age_grp_3cat +
+                            Sex_fac + 
+                            Marital_fac + 
+                            Education_fac +
+                            Income_3Cat +
+                            employ.fac +
+                            BMI_Cat +
+                            smoke.fac +
+                            alcohol.fac + 
+                            exercise.fac +
+                            CCI.fac +
+                            (1|COUNTRY), 
+                          data=eu_mhd_sub,
+                          family = nbinom2)
+
+summary(act_impair_con)
+exp(confint(act_impair_con))
+# check fit
+plot(simulateResiduals(act_impair_con))
+start <- Sys.time()
+act_impair_con_means <- emmeans(act_impair_con, "MGTPHD", rg.limit = 10000000, 
+                                type = "response",
+                                pbkrtest = 3985)
+stop <- Sys.time()
+print(stop - start)
+beep()
+save(act_impair_con, act_impair_con_means, file = "C:/Users/BialoJ/OneDrive - Kantar/Lundbeck Migraine/activity_impairment_con.RData")
+
+act_impair_con_country_means <- ggpredict(act_impair_con, terms = c("COUNTRY"), type = "re")
+write.csv(act_impair_con_country_means, "act_impair_con_country_means.csv")
+
+
+#HCRU -----
+
+##MHD -- ER Visits (glmm)-----
+
+er_visits <- glmmTMB(RUER6Q ~ HDdays.fac + 
+                       #Age_grp + 
+                       Age_grp_3cat +
+                       Sex_fac + 
+                       Marital_fac + 
+                       Education_fac +
+                       Income_3Cat +
+                       employ.fac +
+                       BMI_Cat +
+                       smoke.fac +
+                       alcohol.fac + 
+                       exercise.fac +
+                       CCI.fac +
+                       (1|COUNTRY), 
+                     data=eu_mhd_sub,
+                     family = nbinom2)
+
+summary(er_visits)
+exp(confint(er_visits))
+# check fit
+plot(simulateResiduals(er_visits))
+car::vif(er_visits)
+
+start <- Sys.time()
+er_visits_means <- emmeans(er_visits, "HDdays.fac", rg.limit = 10000000, 
+                           type = "response",
+                           pbkrtest = 3985)
+stop <- Sys.time()
+print(stop - start)
+beep()
+save(er_visits, er_visits_means, file = "./MHD_cat_results/er_visits.RData")
+
+er_visits_country_means <- ggpredict(er_visits, terms = c("HDdays.fac", "COUNTRY"), type = "re")
+
+##MHD -- Provider Visits (glmm)-----
+
+dr_visits <- glmmTMB(TRADTMI ~ HDdays.fac + 
+                       #Age_grp + 
+                       Age_grp_3cat +
+                       Sex_fac + 
+                       Marital_fac + 
+                       Education_fac +
+                       Income_3Cat +
+                       employ.fac +
+                       BMI_Cat +
+                       smoke.fac +
+                       alcohol.fac + 
+                       exercise.fac +
+                       CCI.fac +
+                       (1|COUNTRY), 
+                     data=eu_mhd_sub,
+                     family = nbinom2)
+
+summary(dr_visits)
+exp(confint(dr_visits))
+# check fit
+plot(simulateResiduals(dr_visits))
+car::vif(dr_visits)
+
+start <- Sys.time()
+dr_visits_means <- emmeans(dr_visits, "HDdays.fac", rg.limit = 10000000, 
+                           type = "response",
+                           pbkrtest = 3985)
+stop <- Sys.time()
+print(stop - start)
+beep()
+save(dr_visits, dr_visits_means, file = "./MHD_cat_results/dr_visits.RData")
+
+dr_visits_country_means <- ggpredict(dr_visits, terms = c("HDdays.fac", "COUNTRY"), type = "re")
+
+##MHD -- Hospitalizations (glmm)-----
+
+hospital <- glmmTMB(RUHP6Q ~ HDdays.fac + 
+                      #Age_grp + 
+                      Age_grp_3cat +
+                      Sex_fac + 
+                      Marital_fac + 
+                      Education_fac +
+                      Income_3Cat +
+                      employ.fac +
+                      BMI_Cat +
+                      smoke.fac +
+                      alcohol.fac + 
+                      exercise.fac +
+                      CCI.fac +
+                      (1|COUNTRY), 
+                    data=eu_mhd_sub,
+                    family = nbinom2)
+
+summary(hospital)
+exp(confint(hospital))
+# check fit
+plot(simulateResiduals(hospital))
+car::vif(hospital)
+
+start <- Sys.time()
+hospital_means <- emmeans(hospital, "HDdays.fac", rg.limit = 10000000, 
+                          type = "response",
+                          pbkrtest = 3985)
+stop <- Sys.time()
+print(stop - start)
+beep()
+save(hospital, hospital_means, file = "./MHD_cat_results/hospital.RData")
+
+hospital_country_means <- ggpredict(hospital, terms = c("HDdays.fac", "COUNTRY"), type = "re")
+
+##Mg Frequency -- ER Visits (glmm)----
+
+er_visits_con <- glmmTMB(RUER6Q ~ MGTPHD + 
+                           #Age_grp + 
+                           Age_grp_3cat +
+                           Sex_fac + 
+                           Marital_fac + 
+                           Education_fac +
+                           Income_3Cat +
+                           employ.fac +
+                           BMI_Cat +
+                           smoke.fac +
+                           alcohol.fac + 
+                           exercise.fac +
+                           CCI.fac +
+                           (1|COUNTRY), 
+                         data=eu_mhd_sub,
+                         family = nbinom2)
+
+summary(er_visits_con)
+exp(confint(er_visits_con))
+# check fit
+plot(simulateResiduals(er_visits_con))
+start <- Sys.time()
+er_visits_con_means <- emmeans(er_visits_con, "MGTPHD", rg.limit = 10000000, 
+                               type = "response",
+                               pbkrtest = 3985)
+stop <- Sys.time()
+print(stop - start)
+beep()
+save(er_visits_con, er_visits_con_means, file = "C:/Users/BialoJ/OneDrive - Kantar/Lundbeck Migraine/er_visits_con.RData")
+
+
+write.csv(er_visits_con_country_means, "er_visits_con_country_means.csv")
+
+##Mg Frequency -- Provider Visits (glmm)----
+
+dr_visits_con <- glmmTMB(TRADTMI ~ MGTPHD + 
+                           #Age_grp + 
+                           Age_grp_3cat +
+                           Sex_fac + 
+                           Marital_fac + 
+                           Education_fac +
+                           Income_3Cat +
+                           employ.fac +
+                           BMI_Cat +
+                           smoke.fac +
+                           alcohol.fac + 
+                           exercise.fac +
+                           CCI.fac +
+                           (1|COUNTRY), 
+                         data=eu_mhd_sub,
+                         family = nbinom2)
+
+summary(dr_visits_con)
+exp(confint(dr_visits_con))
+# check fit
+plot(simulateResiduals(dr_visits_con))
+start <- Sys.time()
+dr_visits_con_means <- emmeans(dr_visits_con, "MGTPHD", rg.limit = 10000000, 
+                               type = "response",
+                               pbkrtest = 3985)
+stop <- Sys.time()
+print(stop - start)
+beep()
+save(dr_visits_con, dr_visits_con_means, file = "C:/Users/BialoJ/OneDrive - Kantar/Lundbeck Migraine/dr_visits_con.RData")
+
+dr_visits_con_country_means <- ggpredict(dr_visits_con, terms = c("COUNTRY"), type = "re")
+write.csv(dr_visits_con_country_means, "dr_visits_con_country_means.csv")
+
+##Mg Frequency -- Hospitalizations (glmm)-----
+
+hospital_con <- glmmTMB(RUHP6Q ~ MGTPHD + 
+                          #Age_grp + 
+                          Age_grp_3cat +
+                          Sex_fac + 
+                          Marital_fac + 
+                          Education_fac +
+                          Income_3Cat +
+                          employ.fac +
+                          BMI_Cat +
+                          smoke.fac +
+                          alcohol.fac + 
+                          exercise.fac +
+                          CCI.fac +
+                          (1|COUNTRY), 
+                        data=eu_mhd_sub,
+                        family = nbinom2)
+
+summary(hospital_con)
+exp(confint(hospital_con))
+# check fit
+plot(simulateResiduals(hospital_con))
+start <- Sys.time()
+hospital_con_means <- emmeans(hospital_con, "MGTPHD", rg.limit = 10000000, 
+                              type = "response",
+                              pbkrtest = 3985)
+stop <- Sys.time()
+print(stop - start)
+beep()
+save(hospital_con, hospital_con_means, file = "C:/Users/BialoJ/OneDrive - Kantar/Lundbeck Migraine/hospital_con.RData")
+
+hospital_con_country_means <- ggpredict(hospital_con, terms = c("COUNTRY"), type = "re")
+write.csv(hospital_con_country_means, "hospital_con_country_means.csv")
+
+#Costs -----
+
+##MHD -- Indirect Costs (glmm)-----
+
+indirect_costs <- glmmTMB(floor(total_indirect_cost) ~ HDdays.fac + 
+                            #Age_grp + 
+                            Age_grp_3cat +
+                            Sex_fac + 
+                            Marital_fac + 
+                            Education_fac +
+                            Income_3Cat +
+                            #employ.fac +
+                            BMI_Cat +
+                            smoke.fac +
+                            alcohol.fac + 
+                            exercise.fac +
+                            CCI.fac +
+                            (1|COUNTRY), 
+                          data=eu_mhd_sub,
+                          family = nbinom2)
+
+summary(indirect_costs)
+exp(confint(indirect_costs))
+# check fit
+plot(simulateResiduals(indirect_costs))
+car::vif(indirect_costs)
+
+start <- Sys.time()
+indirect_costs_means <- emmeans(indirect_costs, "HDdays.fac", rg.limit = 10000000, 
+                                type = "response",
+                                pbkrtest = 3985)
+stop <- Sys.time()
+print(stop - start)
+beep()
+
+ eta_squared(aov(indirect_costs))
+
+save(indirect_costs, indirect_costs_means, file = "C:/Users/BialoJ/OneDrive - Kantar/Lundbeck Migraine/indirect_costs.RData")
+
+write.csv(indirect_costs_means, "indirect_costs_means_UPDATED_11.19.csv")
+
+indirect_costs_country_means <- ggpredict(indirect_costs, terms = c("HDdays.fac", "COUNTRY"), type = "re")
+
+write.csv(indirect_costs_country_means, "indirect_costs_country_means_UPDATED_11.19.csv")
+
+
+##MHD -- Direct Costs (glmm)-----
+
+direct_costs <- glmmTMB(floor(Direct_cost) ~ HDdays.fac + 
+                          #Age_grp + 
+                          Age_grp_3cat +
+                          Sex_fac + 
+                          Marital_fac + 
+                          Education_fac +
+                          Income_3Cat +
+                          employ.fac +
+                          BMI_Cat +
+                          smoke.fac +
+                          alcohol.fac + 
+                          exercise.fac +
+                          CCI.fac +
+                          (1|COUNTRY), 
+                        data=eu_mhd_sub,
+                        family = nbinom2)
+
+summary(direct_costs)
+confint(direct_costs)
+# check fit
+plot(simulateResiduals(direct_costs))
+car::vif(direct_costs)
+
+start <- Sys.time()
+direct_costs_means <- emmeans(direct_costs, "HDdays.fac", rg.limit = 10000000, 
+                              type = "response",
+                              pbkrtest = 3985)
+stop <- Sys.time()
+print(stop - start)
+beep()
+save(direct_costs, direct_costs_means, file = "C:/Users/BialoJ/OneDrive - Kantar/Lundbeck Migraine/direct_costs.RData")
+
+direct_costs_country_means <- ggpredict(direct_costs, terms = c("HDdays.fac", "COUNTRY"), type = "re")
+
+
+WPAI_costs_all_country_means <- rbind(absent_country_means,
+                                      present_country_means,
+                                      overall_impair_country_means,
+                                      act_impair_country_means,
+                                      er_visits_country_means,
+                                      dr_visits_country_means,
+                                      hospital_country_means,
+                                      indirect_costs_country_means,
+                                      direct_costs_country_means)
+
+write.csv(WPAI_costs_all_country_means, "WPAI_costs_all_country_means.csv")
+
+
+
+
+##Mg Frequency -- Indirect Costs (glmm)-----
+
+indirect_costs_con <- glmmTMB(floor(total_indirect_cost) ~ MGTPHD + 
+                                #Age_grp + 
+                                Age_grp_3cat +
+                                Sex_fac + 
+                                Marital_fac + 
+                                Education_fac +
+                                Income_3Cat +
+                                #employ.fac +
+                                BMI_Cat +
+                                smoke.fac +
+                                alcohol.fac + 
+                                exercise.fac +
+                                CCI.fac +
+                                (1|COUNTRY), 
+                              data=eu_mhd_sub,
+                              family = nbinom2)
+
+summary(indirect_costs_con)
+exp(confint(indirect_costs_con))
+# check fit
+plot(simulateResiduals(indirect_costs_con))
+start <- Sys.time()
+indirect_costs_con_means <- emmeans(indirect_costs_con, "MGTPHD", rg.limit = 10000000, 
+                                    type = "response",
+                                    pbkrtest = 3985)
+stop <- Sys.time()
+print(stop - start)
+beep()
+save(indirect_costs_con, indirect_costs_con_means, file = "C:/Users/BialoJ/OneDrive - Kantar/Lundbeck Migraine/indirect_costs_con_UPDATED_11.19.RData")
+
+indirect_costs_con_country_means <- ggpredict(indirect_costs_con, terms = c("COUNTRY"), type = "re")
+write.csv(indirect_costs_con_country_means, "indirect_costs_con_country_means.csv")
+
+##Mg Frequency -- Direct Costs (glmm)-----
+
+direct_costs_con <- glmmTMB(floor(Direct_cost) ~ MGTPHD + 
+                              #Age_grp + 
+                              Age_grp_3cat +
+                              Sex_fac + 
+                              Marital_fac + 
+                              Education_fac +
+                              Income_3Cat +
+                              employ.fac +
+                              BMI_Cat +
+                              smoke.fac +
+                              alcohol.fac + 
+                              exercise.fac +
+                              CCI.fac +
+                              (1|COUNTRY), 
+                            data=eu_mhd_sub,
+                            family = nbinom2)
+
+summary(direct_costs_con)
+exp(confint(direct_costs_con))
+# check fit
+plot(simulateResiduals(direct_costs_con))
+start <- Sys.time()
+direct_costs_con_means <- emmeans(direct_costs_con, "MGTPHD", rg.limit = 10000000, 
+                                  type = "response",
+                                  pbkrtest = 3985)
+stop <- Sys.time()
+print(stop - start)
+beep()
+save(direct_costs_con, direct_costs_con_means, file = "C:/Users/BialoJ/OneDrive - Kantar/Lundbeck Migraine/direct_costs_con.RData")
+
+direct_costs_con_country_means <- ggpredict(direct_costs_con, terms = c("COUNTRY"), type = "re")
+
+all_con_country_means <- rbind(
+  #midas_con_country_means,
+  absent_con_country_means,
+  present_con_country_means,
+  overall_impair_con_country_means,
+  act_impair_con_country_means,
+  er_visits_con_country_means,
+  dr_visits_con_country_means,
+  hospital_con_country_means,
+  indirect_costs_con_country_means,
+  direct_costs_con_country_means)
+
+#write.csv(all_con_country_means, "all_con_country_means_11.22.csv")
+
+#write.csv(all_con_country_means, "means_11.22")
+#write.csv(direct_costs_con_country_means, "direct_costs_con_country_means.csv")
+
+WPAI_costs_all_country_means_con <- rbind(absent_con_country_means,
+                                          present_con_country_means,
+                                          overall_impair_con_country_means,
+                                          act_impair_con_country_means,
+                                          er_visits_con_country_means,
+                                          dr_visits_con_country_means,
+                                          hospital_con_country_means,
+                                          indirect_costs_con_country_means,
+                                          direct_costs_con_country_means)
+
+#write.csv(WPAI_costs_all_country_means_con, "WPAI_costs_all_country_means_con.csv")
+
+mhd_mcs_coeffs <- coef(summary(mcs)) 
+#mhd_mcs_p <- pnorm(abs(mhd_mcs_coeffs[, "t value"]), lower.tail = FALSE) * 2
+mhd_mcs_coeffsp <- print(cbind(mhd_mcs_coeffs[c(1:4), ]))
+#, "p value" = round(mhd_mcs_p,3))) 
+
+mcs_OR <- cbind(exp(fixef(mcs)),exp(confint(mcs)[-c(1:2),]))
+mcs_OR <- mcs_OR[c(2:4), ]
+
+mhd_mcs_coeffs_con <- coef(summary(mcs_con)) 
+#mhd_mcs_p_con <- pnorm(abs(mhd_mcs_coeffs_con[, "t value"]), lower.tail = FALSE) * 2
+mhd_mcs_coeffsp_con <- print(cbind(mhd_mcs_coeffs_con[c(1:4), ]))
+#, "p value" = round(mhd_mcs_p_con,3))) 
+
+mcs_OR_con <- cbind(exp(fixef(mcs_con)),exp(confint(mcs_con)[-c(1:2),]))
+mcs_OR_con <- mcs_OR_con[c(1:2), ]
+
+mhd_pcs_coeffs <- coef(summary(pcs)) 
+#mhd_pcs_p <- pnorm(abs(mhd_pcs_coeffs[, "t value"]), lower.tail = FALSE) * 2
+mhd_pcs_coeffsp <- print(cbind(mhd_pcs_coeffs[c(1:4), ]))
+#, "p value" = round(mhd_pcs_p,3)))
+
+pcs_OR <- cbind(exp(fixef(pcs)),exp(confint(pcs)[-c(1:2),]))
+pcs_OR <- pcs_OR[c(2:4), ]
+
+mhd_pcs_coeffs_con <- coef(summary(pcs_con)) 
+#mhd_pcs_p_con <- pnorm(abs(mhd_pcs_coeffs_con[, "t value"]), lower.tail = FALSE) * 2
+mhd_pcs_coeffsp_con <- print(cbind(mhd_pcs_coeffs_con[c(1:4), ]))
+#, "p value" = round(mhd_pcs_p_con,3))) 
+
+pcs_OR_con <- cbind(exp(fixef(pcs_con)),exp(confint(pcs_con)[-c(1:2),]))
+pcs_OR_con <- pcs_OR_con[c(1:2), ]
+
+mhd_sf_util_coeffs <- coef(summary(sf_util)) 
+#mhd_sf_util_p <- pnorm(abs(mhd_sf_util_coeffs[, "t value"]), lower.tail = FALSE) * 2
+mhd_sf_util_coeffsp <- print(cbind(mhd_sf_util_coeffs[c(1:4), ]))
+#, "p value" = round(mhd_sf_util_p,3))) 
+
+sf_util_OR <- cbind(exp(fixef(sf_util)),exp(confint(sf_util)[-c(1:2),]))
+sf_util_OR <- sf_util_OR[c(2:4), ]
+
+mhd_sf_util_coeffs_con <- coef(summary(sf_util_con)) 
+#mhd_sf_util_p_con <- pnorm(abs(mhd_sf_util_coeffs_con[, "t value"]), lower.tail = FALSE) * 2
+mhd_sf_util_coeffsp_con <- print(cbind(mhd_sf_util_coeffs_con[c(1:4), ]))
+#, "p value" = round(p,3))) 
+
+sf_util_OR_con <- cbind(exp(fixef(sf_util_con)),exp(confint(sf_util_con)[-c(1:2),]))
+sf_util_OR_con <- sf_util_OR_con[c(1:2), ]
+
+mhd_e5d_IV_coeffs <- coef(summary(e5d_IV)) 
+#mhd_e5d_IV_p <- pnorm(abs(mhd_e5d_IV_coeffs[, "t value"]), lower.tail = FALSE) * 2
+mhd_e5d_IV_coeffsp <- print(cbind(mhd_e5d_IV_coeffs[c(1:4), ]))
+#, "p value" = round(p,3))) 
+
+e5d_IV_OR <- cbind(exp(fixef(e5d_IV)),exp(confint(e5d_IV)[-c(1:2),]))
+e5d_IV_OR <- e5d_IV_OR[c(2:4), ]
+
+mhd_e5d_IV_coeffs_con <- coef(summary(e5d_IV_con)) 
+#mhd_e5d_IV_p_con <- pnorm(abs(mhd_e5d_IV_coeffs_con[, "t value"]), lower.tail = FALSE) * 2
+mhd_e5d_IV_coeffsp_con <- print(cbind(mhd_e5d_IV_coeffs_con[c(1:4), ]))
+#, "p value" = round(p,3))) 
+
+e5d_IV_OR_con <- cbind(exp(fixef(e5d_IV_con)),exp(confint(e5d_IV_con)[-c(1:2),]))
+e5d_IV_OR_con <- e5d_IV_OR_con[c(1:2), ]
+
+mhd_e5d_VAS_coeffs <- coef(summary(e5d_VAS)) 
+#mhd_e5d_VAS_p <- pnorm(abs(mhd_e5d_VAS_coeffs[, "t value"]), lower.tail = FALSE) * 2
+mhd_e5d_VAS_coeffsp <- print(cbind(mhd_e5d_VAS_coeffs[c(1:4), ]))
+#, "p value" = round(p,3))) 
+
+e5d_VAS_OR <- cbind(exp(fixef(e5d_VAS)),exp(confint(e5d_VAS)[-c(1:2),]))
+e5d_VAS_OR <- e5d_VAS_OR[c(2:4), ]
+
+mhd_e5d_VAS_coeffs_con <- coef(summary(e5d_VAS_con)) 
+#mhd_e5d_VAS_p_con <- pnorm(abs(mhd_e5d_VAS_coeffs_con[, "t value"]), lower.tail = FALSE) * 2
+mhd_e5d_VAS_coeffsp_con <- print(cbind(mhd_e5d_VAS_coeffs_con[c(1:4), ]))
+#, "p value" = round(p,3))) 
+
+e5d_VAS_OR_con <- cbind(exp(fixef(e5d_VAS_con)),exp(confint(e5d_VAS_con)[-c(1:2),]))
+e5d_VAS_OR_con <- e5d_VAS_OR_con[c(1:2), ]
+
+mhd_midas_coeffs <- coef(summary(midas)) 
+#mhd_midas_p <- pnorm(abs(mhd_midas_coeffs[, "z value"]), lower.tail = FALSE) * 2
+#mhd_midas_coeffsp <- print(cbind(mhd_midas_coeffs[c(1:4), -3], "p value" = round(p,3))) 
+mhd_midas_coeffsp <- print(cbind(mhd_midas_coeffs[["cond"]][c(1:4), -3])) 
+#write.csv(mhd_midas_coeffsp, "mhd_midas_coeffs.csv")
+
+mhd_midas_coeffs_con <- coef(summary(midas_con)) 
+#mhd_midas_p_con <- pnorm(abs(mhd_midas_coeffs_con[, "t value"]), lower.tail = FALSE) * 2
+#mhd_midas_coeffsp_con <- print(cbind(mhd_midas_coeffs_con[c(1:4), ], "p value" = round(p,3))) 
+mhd_midas_coeffs_con <- print(cbind(mhd_midas_coeffs_con[["cond"]][c(1:2), -3])) 
+#write.csv(mhd_midas_coeffs_con, "mhd_midas_coeffs_con.csv")
+
+all_mhd_coefs <- rbind(mhd_mcs_coeffsp,
+                       mhd_pcs_coeffsp,
+                       mhd_sf_util_coeffsp,
+                       mhd_e5d_IV_coeffsp,
+                       mhd_e5d_VAS_coeffsp)
+
+#write.csv(all_mhd_coefs, "all_mhd_coefs.csv")
+
+all_mhd_coefs_con <- rbind(mhd_mcs_coeffsp_con,
+                           mhd_pcs_coeffsp_con,
+                           mhd_sf_util_coeffsp_con,
+                           mhd_e5d_IV_coeffsp_con,
+                           mhd_e5d_VAS_coeffsp_con)
+
+#write.csv(all_mhd_coefs_con, "all_mhd_coefs_con.csv")
+
+all_OR_MHD <- rbind(mcs_OR,
+                    pcs_OR,
+                    sf_util_OR,
+                    e5d_IV_OR,
+                    e5d_VAS_OR)
+
+#write.csv(all_OR_MHD, "all_OR_MHD.csv")
+
+all_OR_MHD_con <- rbind(mcs_OR_con,
+                        pcs_OR_con,
+                        sf_util_OR_con,
+                        e5d_IV_OR_con,
+                        e5d_VAS_OR_con)
+
+#write.csv(all_OR_MHD_con, "all_OR_MHD_con.csv")
+
+absent_coeffs <- coef(summary(absent)) 
+absent_coeffs <- print(cbind(absent_coeffs[["cond"]][c(1:4), -3])) 
+
+absent_coeffs_con <- coef(summary(absent_con)) 
+absent_coeffs_con <- print(rbind(absent_coeffs_con[["cond"]][c(1:2), -3])) 
+
+present_coeffs <- coef(summary(present)) 
+present_coeffs <- print(cbind(present_coeffs[["cond"]][c(1:4), -3])) 
+
+present_coeffs_con <- coef(summary(present_con)) 
+present_coeffs_con <- print(rbind(present_coeffs_con[["cond"]][c(1:2), -3])) 
+
+overall_impair_coeffs <- coef(summary(overall_impair)) 
+overall_impair_coeffs <- print(cbind(overall_impair_coeffs[["cond"]][c(1:4), -3])) 
+
+overall_impair_coeffs_con <- coef(summary(overall_impair_con)) 
+overall_impair_coeffs_con <- print(rbind(overall_impair_coeffs_con[["cond"]][c(1:2), -3])) 
+
+act_impair_coeffs <- coef(summary(act_impair)) 
+act_impair_coeffs <- print(cbind(act_impair_coeffs[["cond"]][c(1:4), -3])) 
+
+act_impair_coeffs_con <- coef(summary(act_impair_con)) 
+act_impair_coeffs_con <- print(rbind(act_impair_coeffs_con[["cond"]][c(1:2), -3]))
+
+er_visits_coeffs <- coef(summary(er_visits)) 
+er_visits_coeffs <- print(cbind(er_visits_coeffs[["cond"]][c(1:4), -3])) 
+
+er_visits_coeffs_con <- coef(summary(er_visits_con)) 
+er_visits_coeffs_con <- print(rbind(er_visits_coeffs_con[["cond"]][c(1:2), -3]))
+
+dr_visits_coeffs <- coef(summary(dr_visits)) 
+dr_visits_coeffs <- print(cbind(dr_visits_coeffs[["cond"]][c(1:4), -3])) 
+
+dr_visits_coeffs_con <- coef(summary(dr_visits_con)) 
+dr_visits_coeffs_con <- print(rbind(dr_visits_coeffs_con[["cond"]][c(1:2), -3]))
+
+hospital_coeffs <- coef(summary(hospital)) 
+hospital_coeffs <- print(cbind(hospital_coeffs[["cond"]][c(1:4), -3])) 
+
+hospital_coeffs_con <- coef(summary(hospital_con)) 
+hospital_coeffs_con <- print(rbind(hospital_coeffs_con[["cond"]][c(1:2), -3]))
+
+indirect_costs_coeffs <- coef(summary(indirect_costs)) 
+indirect_costs_coeffs <- print(cbind(indirect_costs_coeffs[["cond"]][c(1:4), -3])) 
+
+indirect_costs_coeffs_con <- coef(summary(indirect_costs_con)) 
+indirect_costs_coeffs_con <- print(rbind(indirect_costs_coeffs_con[["cond"]][c(1:2), -3]))
+
+direct_costs_coeffs <- coef(summary(direct_costs)) 
+direct_costs_coeffs <- print(cbind(direct_costs_coeffs[["cond"]][c(1:4), -3])) 
+
+direct_costs_coeffs_con <- coef(summary(direct_costs_con)) 
+direct_costs_coeffs_con <- print(rbind(direct_costs_coeffs_con[["cond"]][c(1:2), -3]))
+
+wpai_costs_all_coefs <- rbind(absent_coeffs,
+                              present_coeffs,
+                              overall_impair_coeffs,
+                              act_impair_coeffs,
+                              er_visits_coeffs,
+                              dr_visits_coeffs,
+                              hospital_coeffs,
+                              indirect_costs_coeffs,
+                              direct_costs_coeffs)
+
+#write.csv(wpai_costs_all_coefs, "wpai_costs_all_coefs.csv")
+#write.csv(indirect_costs_coeffs, "indirect_costs_coeffs_UPDATED_11.19.csv")
+
+wpai_costs_all_coefs_con <- rbind(absent_coeffs_con,
+                                  present_coeffs_con,
+                                  overall_impair_coeffs_con,
+                                  act_impair_coeffs_con,
+                                  er_visits_coeffs_con,
+                                  dr_visits_coeffs_con,
+                                  hospital_coeffs_con,
+                                  indirect_costs_coeffs_con,
+                                  direct_costs_coeffs_con)
+
+#write.csv(wpai_costs_all_coefs_con, "wpai_costs_all_coefs_con.csv")
+
+absent_OR <- exp(confint(absent))
+present_OR <- exp(confint(present))
+overall_impairment_OR <- exp(confint(overall_impair))
+act_impairment_OR <- exp(confint(act_impair))
+er_visits_OR <- exp(confint(er_visits))
+dr_visits_OR <- exp(confint(dr_visits))
+hospital_OR <- exp(confint(hospital))
+indirect_costs_OR <- exp(confint(indirect_costs))
+direct_costs_OR <- exp(confint(direct_costs))
+midas_OR <- exp(confint(midas))
+
+wpai_costs_OR <- rbind(absent_OR[c(2:4), ],
+                       present_OR[c(2:4), ],
+                       overall_impairment_OR[c(2:4), ],
+                       act_impairment_OR[c(2:4), ],
+                       er_visits_OR[c(2:4), ],
+                       dr_visits_OR[c(2:4), ],
+                       hospital_OR[c(2:4), ],
+                       indirect_costs_OR[c(2:4), ],
+                       direct_costs_OR[c(2:4), ],
+                       midas_OR[c(2:4), ])
+
+#write.csv(wpai_costs_OR, "wpai_costs_OR_UPDATED_11.19.csv")
+
+#write.csv(indirect_costs_OR[c(2:4), ], "indirect_costs_OR_UPDATED_11.19.csv")
+
+absent_OR_con <- exp(confint(absent_con))
+present_OR_con <- exp(confint(present_con))
+overall_impairment_OR_con <- exp(confint(overall_impair_con))
+act_impairment_OR_con <- exp(confint(act_impair_con))
+er_visits_OR_con <- exp(confint(er_visits_con))
+dr_visits_OR_con <- exp(confint(dr_visits_con))
+hospital_OR_con <- exp(confint(hospital_con))
+indirect_costs_OR_con <- exp(confint(indirect_costs_con))
+direct_costs_OR_con <- exp(confint(direct_costs_con))
+midas_OR_con <- exp(confint(midas_con))
+
+wpai_costs_OR_con <- rbind(absent_OR_con[c(1:2), ],
+                           present_OR_con[c(1:2), ],
+                           overall_impairment_OR_con[c(1:2), ],
+                           act_impairment_OR_con[c(1:2), ],
+                           er_visits_OR_con[c(1:2), ],
+                           dr_visits_OR_con[c(1:2), ],
+                           hospital_OR_con[c(1:2), ],
+                           indirect_costs_OR_con[c(1:2), ],
+                           direct_costs_OR_con[c(1:2), ],
+                           midas_OR_con[c(1:2), ])
+
+#write.csv(wpai_costs_OR_con, "wpai_costs_OR_con_UPDATED_11.19.csv")
+
+#write.csv(indirect_costs_OR_con[c(1:2), ], "indirect_costs_OR_con.csv")
+
+#############
+#############
+
+fixef(absent)
+cc <- confint(absent, parm = "beta_")
+ctab <- cbind(est = fixef(absent), cc)
+
+install.packages("broom.mixed")
+library(broom.mixed)
+
+ab <- tidy(absent,conf.int=TRUE,exponentiate=TRUE)
+abs <- tidy(absent, conf.int = TRUE)
+
+,effects="fixed")
+pr <- tidy(present,conf.int=TRUE,exponentiate=TRUE,effects="fixed")
+
+
+
+mcs_count <- eu_mhd_sub %>%
+  count(HDdays.fac, "MCS")
+pcs_count <- eu_mhd_sub %>%
+  count(HDdays.fac, "PCS")
+sf_util_count <- eu_mhd_sub %>%
+  count(HDdays.fac, "SF6D_R2")
+eqIV_count <- eu_mhd_sub %>%
+  count(HDdays.fac, "EQ5DINDEX")
+eqVAS_count <- eu_mhd_sub %>%
+  count(HDdays.fac, "EQ5D6")
+midas_count <- eu_mhd_sub %>%
+  count(HDdays.fac, "MIDAS_GROUP")
+
+qol_counts <- cbind(mcs_count,
+                    pcs_count,
+                    sf_util_count,
+                    eqIV_count,
+                    eqVAS_count,
+                    midas_count)
+
+absent_count <- eu_mhd_sub %>%
+  count(HDdays.fac, "WPPCTWRK")
+present_count <- eu_mhd_sub %>%
+  count(HDdays.fac, "WPIMPAIR")
+overall_impairment_count <- eu_mhd_sub %>%
+  count(HDdays.fac, "WPWRKIMP")
+act_impairment_count <- eu_mhd_sub %>%
+  count(HDdays.fac, "WPACTIMP")
+er_visits_count <- eu_mhd_sub %>%
+  count(HDdays.fac, "RUER6Q")
+dr_visits_count <- eu_mhd_sub %>%
+  count(HDdays.fac, "TRADTMI")
+hospital_count <- eu_mhd_sub %>%
+  count(HDdays.fac, "RUHP6Q")
+indirect_costs_count <- eu_mhd_sub %>%
+  count(HDdays.fac, "total_indirect_cost")
+direct_costs_count <- eu_mhd_sub %>%
+  count(HDdays.fac, "Direct_cost")
+
+wpai_costs_counts <- cbind(absent_count,
+                           present_count,
+                           overall_impairment_count,
+                           act_impairment_count,
+                           er_visits_count,
+                           dr_visits_count,
+                           hospital_count,
+                           indirect_costs_count,
+                           direct_costs_count)    
+
+
+
+##############
+##############
+exp(confint(mcs))
+
+exp(confint(pcs))
+fixef(mcs)
+confint(mcs)
+
+cbind(exp((fixef(mcs), 
+           (confint(mcs)[-c(1:2), ]))))
+
+cbind(exp(fixef(mcs),
+          confint(mcs)[-c(1:2)]))
+
+cbind(exp(fixef(mcs),
+          confint(mcs)))
+
+cbind(exp(fixef(mcs)), exp(confint(mcs)))
+exp(2.12)
+
+cbind(exp(fixef(mcs)),exp(confint(mcs)[-c(1:2),]))
+
+
+
+exp(confint(absent))
+
+eu_mhd_sub
+
+table(eu_mhd_sub$Group_HD_Days) #3947
+table(eu$Group_HD_Days)
+library(effectsize)
+df %>%
+  group_by(Class) %>%
+  mutate(effect = cohens_d(score1, score2))
+
+eu_mhd_sub %>%
+  group_by(HDdays.fac) %>%
+  mutate(effect = cohens_d(MCS, HDdays.fac))
+
+eu_mhd_sub %>%
+  group_by(HDdays.fac) %>%
+  mutate(effect = cohens_d(indirect_costs))
+
+cohens_d_list <- by(df, df$grade, function(sub) 
+  cohens_d(sub$score1, sub$score2)
+)
+
+cohens_d_list$class1
+cohens_d_list$class2
+cohens_d_list$class3
+
+rlang::last_error()

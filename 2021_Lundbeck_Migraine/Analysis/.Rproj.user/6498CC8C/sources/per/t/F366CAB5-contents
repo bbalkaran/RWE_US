@@ -1,0 +1,372 @@
+#########################################################
+#  Script: Lundbeck - MV Analysis (MHD subgroup).R
+#  Purpose: Multivariable models
+#  Data file: eu_mhd_sub20.sav
+#  Author: Jacquelyn Bialo
+#  Project: 161104804
+#  Project Manager: Dena Jaffe
+#  Date Created: 11/17/2021
+#  Date Edited: 11/18/2021
+########################################################
+
+library(haven)
+library(lme4)
+library(lmtest)
+library(lmerTest)
+library(emmeans)
+library(dplyr)
+library(forcats)
+library(ggeffects)
+
+#eu20 <- read_sav("C:/Users/BB089264/Cerner Corporation/Lundbeck Migraine Prevalence and MOH Global NHWS - General/7 Data and syntax/Data/EU2020_Clean.sav")
+eu20 <- read_sav("C:/Users/BB089264/Cerner Corporation/Lundbeck Migraine Prevalence and MOH Global NHWS - General (1)/7 Data and syntax/EU2020_Clean_w_Costs_11.15.sav")
+
+# n = 62319
+
+eu_mhd_sub <- eu20 %>% filter(!is.na(Group_HD_Days))
+# n = 3985
+
+
+# Variable List:
+# Mental Component Summary Score (MCS), 
+# Physical component summary score (PCS)
+# Absenteeism (employed only) (WPPCTWRK), 
+# presenteeism (employed only)(WPIMPAIR),
+# work impairment (employed only) (WPWRKIMP),
+# activity impairment (all) (WPACTIMP),
+# Number emergency room (ER) visits (RUER6Q)
+# Number of healthcare provider visits (TRADTMI)
+# Number of hospitalizations (RUHP6Q)
+# direct costs (Direct_cost)
+# indirect costs (total_indirect_cost)
+# Migraine frequency (MGTPHD)
+# Group_HD_Days
+# Age (DEAGE)
+# Gender (DESEX)
+# Marital status (DEMAR) (marital)
+# Education (DEEDU) (education)
+# Annual household income (DEINC) (Income_Cat)
+# Employment status (employment)
+# BMI (BMI) (BMI_Cat)
+# Smoking status (HHSMK) (smoke)
+# Alcohol use (HHALCQ) (HHALCQ_Cat)
+# Exercise behavior (HHEX) (HHEX_Cat)
+# Charlson comorbidity Index (CCI)
+# Country (COUNTRY)
+# SF (SF6D_R2)
+# EQ5D IV (EQ5DINDEX)
+# EQ5D VAS (EQ5D6)
+
+#Countries:
+#2 = France
+#3 = Germany
+#4 = UK
+#5 = Italy
+#6 = Spain
+
+eu_mhd_sub$COUNTRY <- 
+  eu_mhd_sub$COUNTRY %>% 
+  factor(levels = c(2:6), 
+         labels =  c("France",
+                     "Germany",
+                     "UK",
+                     "Italy",
+                     "Spain"))
+
+eu_mhd_sub <-subset(eu_mhd_sub,
+                    select = c(zKey, MCS,
+                               PCS,
+                               WPPCTWRK,
+                               WPIMPAIR,
+                               WPWRKIMP,
+                               WPACTIMP,
+                               WPMIS, 
+                               WPWRK, 
+                               WPPRD,
+                               RUER6Q,
+                               RUER6Q_r,
+                               TRADTMI,
+                               TRADTMI_r,
+                               RUHP6Q,
+                               RUHP6Q_r,
+                               DEAGE,
+                               DESEX,
+                               Marital,
+                               Education,
+                               Income_Cat,
+                               Employment,
+                               BMI_Cat,
+                               smoke,
+                               HHALCQ_Cat,
+                               HHALCQ,
+                               HHEX,
+                               HHEX_Cat,
+                               CCIQuancat,
+                               COUNTRY,
+                               Group_MO,
+                               Group_HD_Days,
+                               MIDAS_GROUP,
+                               MIDAS_SCRE,
+                               EQ5DINDEX,
+                               EQ5D6,
+                               SF6D_R2,
+                                Direct_cost,
+                               total_indirect_cost,
+                               MGTPHD))
+# table(eu_mhd_sub$HDdays.fac, is.na(eu_mhd_sub$WPPCTWRK)) #absent
+# table(eu_mhd_sub$HDdays.fac, is.na(eu_mhd_sub$WPIMPAIR)) #present
+# table(eu_mhd_sub$HDdays.fac, is.na(eu_mhd_sub$WPWRKIMP))
+# table(eu_mhd_sub$HDdays.fac, is.na(eu_mhd_sub$WPACTIMP))
+
+# library(psych)
+# describe(eu_mhd_sub$MCS)
+# describe(eu_mhd_sub$PCS)
+# describe(eu_mhd_sub$SF6D_R2)
+# describe(eu_mhd_sub$WPPCTWRK)
+# describe(eu_mhd_sub$WPIMPAIR)
+# describe(eu_mhd_sub$WPWRKIMP)
+# describe(eu_mhd_sub$total_indirect_cost)
+# describe(eu_mhd_sub$Direct_cost)
+# describe(eu_mhd_sub$MIDAS_SCRE)
+# 
+# table(eu_mhd_sub$MGTPHD, is.na(eu_mhd_sub$WPPCTWRK)) #absent
+# table(eu_mhd_sub$HDdays.fac, is.na(eu_mhd_sub$WPIMPAIR)) #present
+# table(eu_mhd_sub$HDdays.fac, is.na(eu_mhd_sub$WPWRKIMP))
+# table(eu_mhd_sub$HDdays.fac, is.na(eu_mhd_sub$WPACTIMP))
+# 
+# eu_mhd_sub %>%
+#   group_by(COUNTRY) %>%
+#   count(Group_MO)
+
+#Review the variables.
+#lapply(eu_mhd_sub,unique)
+#attach(eu_mhd_sub)
+
+#Age: condense to factors by making categories 18-29, 30-39, 40-49, 50-59, 60-69, 70-79, 80+
+#unique(DEAGE)
+eu_mhd_sub$Age_grp<-cut(
+  eu_mhd_sub$DEAGE,
+  breaks = c(18, 30, 40, 50, 60, 70, 80, Inf),
+  labels = c("18 - 29", "30 - 39", "40 - 49", "50 - 59",
+             "60 - 69", "70 - 79", "80+"),
+  right = FALSE)
+
+#Recode Age_grp into 3 categories
+eu_mhd_sub$Age_grp_3cat <- as.factor(ifelse(eu_mhd_sub$Age_grp == "18 - 29", 1,
+                                            ifelse(eu_mhd_sub$Age_grp == "30 - 39", 1,
+                                                   ifelse(eu_mhd_sub$Age_grp == "40 - 49", 2,
+                                                          ifelse(eu_mhd_sub$Age_grp == "50 - 59", 2,
+                                                                 ifelse(eu_mhd_sub$Age_grp == "60 - 69", 3,
+                                                                        ifelse(eu_mhd_sub$Age_grp == "70 - 79", 3, 
+                                                                               ifelse(eu_mhd_sub$Age_grp == "80+", 3, eu_mhd_sub$Age_grp))))))))
+
+
+# table(eu_mhd_sub$Age_grp)
+# table(eu_mhd_sub$Age_grp_3cat)
+
+
+#eu_mhd_sub$DESEX
+eu_mhd_sub$Sex_fac <- dplyr::recode(
+  as.factor(eu_mhd_sub$DESEX),
+  "1" = "Male",
+  "2" = "Female")
+
+
+#unique(Marital)
+#table(eu_mhd_sub$Marital)
+
+eu_mhd_sub$Marital_fac_R<-dplyr::recode(
+  as.factor(
+    eu_mhd_sub$Marital),
+  "1" = "Married/LivingWith",
+  "2" = "Single/NM/Div/Sep/Widow",
+  "3" = "DtA") #6
+
+eu_mhd_sub <- eu_mhd_sub[eu_mhd_sub$Marital_fac_R == "Married/LivingWith" | 
+                           eu_mhd_sub$Marital_fac_R == "Single/NM/Div/Sep/Widow", ]
+eu_mhd_sub$Marital_fac <- droplevels(eu_mhd_sub$Marital_fac_R) # n = 3979
+#table(eu_mhd_sub$Marital_fac_R)
+#table(eu_mhd_sub$Marital_fac)
+
+#unique(Education)
+#table(eu_mhd_sub$Education)
+eu_mhd_sub$Education_fac<-dplyr::recode(
+  as.factor(
+    eu_mhd_sub$Education),
+  "1" = "4-year uni degree +",
+  "2" = "< 4-year uni degree",
+  "3" = "DNA/DtA" #32
+)
+
+eu_mhd_sub$Income_3Cat <- fct_collapse(
+  as.factor(eu_mhd_sub$Income_Cat), 
+  "Low" = c("1","2"), 
+  "Medium" = c("3","4","5"), 
+  "High" = c("6","7","8","9","10"),
+  "DtA" = "99") #234
+
+
+#unique(Employment)
+eu_mhd_sub$employ.fac<-dplyr::recode(
+  as.factor(eu_mhd_sub$Employment),
+  "1" = "FT/PT/SE",
+  "2" = "Not employed"
+)
+
+#unique(BMI_Cat)
+eu_mhd_sub$BMI_Cat<-dplyr::recode(
+  as.factor(eu_mhd_sub$BMI_Cat),
+  "1" = "Underweight",
+  "2" = "Normal weight",
+  "3" = "Overweight",
+  "4" = "Obese",
+  "5" = "Unk/DtA"
+)
+
+
+#unique(smoke)
+eu_mhd_sub$smoke.fac<-dplyr::recode(
+  as.factor(eu_mhd_sub$smoke),
+  "0" = "Current smoker",
+  "1" = "Former smoker",
+  "2" = "Never"
+)
+
+#unique(HHALCQ_Cat)
+eu_mhd_sub$alcohol.fac<-dplyr::recode(
+  as.factor(eu_mhd_sub$HHALCQ_Cat),
+  "1" = "Currently drink",
+  "2" = "Does not"
+)
+
+#unique(HHEX_Cat)
+#class(HHEX_Cat)
+eu_mhd_sub$exercise.fac<-dplyr::recode(
+  as.factor(eu_mhd_sub$HHEX_Cat),
+  "1" = "Yes",
+  "2" = "No"
+)
+
+#unique(CCIQuancat)
+eu_mhd_sub$CCI.fac<-dplyr::recode(
+  as.factor(eu_mhd_sub$CCIQuancat),
+  "0" = "0",
+  "1" = "1",
+  "2" = "2",
+  "3" = "3+"
+)
+
+#unique(eu_mhd_sub$MIDAS_GROUP)
+eu_mhd_sub$MIDAS_fac <- dplyr::recode(
+  as.factor(eu_mhd_sub$MIDAS_GROUP),
+  "1" = "MIDAS Grade I",
+  "2" = "MIDAS Grade II",
+  "3" = "MIDAS Grade III",
+  "4" = "MIDAS Grade IV"
+)
+eu_mhd_sub$MIDAS_dich <- ifelse(eu_mhd_sub$MIDAS_fac == "MIDAS Grade I", 0,
+                                ifelse(eu_mhd_sub$MIDAS_fac == "MIDAS Grade II", 1,
+                                       ifelse(eu_mhd_sub$MIDAS_fac == "MIDAS Grade III", 1,
+                                              ifelse(eu_mhd_sub$MIDAS_fac == "MIDAS Grade IV", 1, eu_mhd_sub$MIDAS_fac))))
+
+#eu_mhd_sub$MIDAS_01v34 <- ifelse(eu_mhd_sub$MIDAS_fac == "MIDAS Grade I", 0,
+#                               ifelse(eu_mhd_sub$MIDAS_fac == "MIDAS Grade II", 0,
+#                                     ifelse(eu_mhd_sub$MIDAS_fac == "MIDAS Grade III", 1,
+#                                           ifelse(eu_mhd_sub$MIDAS_fac == "MIDAS Grade IV", 1, eu_mhd_sub$MIDAS_fac))))
+
+# table(eu_mhd_sub$MIDAS_GROUP)
+# table(eu_mhd_sub$MIDAS_fac)
+# table(eu_mhd_sub$MIDAS_dich)
+#table(eu_mhd_sub$MIDAS_01v34)
+
+#unique(Group_HD_Days)
+eu_mhd_sub$HDdays.fac<-relevel(dplyr::recode(
+  as.factor(eu_mhd_sub$Group_HD_Days),
+  "1" = "LFEM",
+  "2" = "MFEM",
+  "3" = "HFEM",
+  "4" = "CM"),
+  ref = "MFEM")
+levels(eu_mhd_sub$HDdays.fac)
+#detach(eu_mhd_sub)
+
+country_counts <- eu_mhd_sub %>%
+  group_by(COUNTRY, HDdays.fac) %>%
+  count()
+#write.csv(country_counts, "country_counts_by MHD.csv")
+
+
+# indirect costs -----
+
+# indirect_costs<- function(data){
+#   data <- data %>%
+#     #https://www.bls.gov/opub/reports/womens-earnings/2017/pdf/home.pdf  DATA COMES FROM HERE
+#     mutate(Hourly_wage = case_when( DESEX == 1 & COUNTRY == 2 ~ 16.29 + 16.29*.034 + 16.29*.032,
+#                                     DESEX == 1 & COUNTRY == 3 ~ 18.66 + 18.66*.034 + 18.66*.032,
+#                                     DESEX == 1 & COUNTRY == 4 ~ 16.89 + 16.89*.034 + 16.89*.032,
+#                                     DESEX == 1 & COUNTRY == 5 ~ 12.73 + 12.73*.034 + 12.73*.032,
+#                                     DESEX == 1 & COUNTRY == 6 ~ 12.43 + 12.43*.034 + 12.43*.032,
+#                                     DESEX == 2 & COUNTRY == 2 ~ 14.36 + 14.36*.034 + 14.36*.032,
+#                                     DESEX == 2 & COUNTRY == 3 ~ 15.83 + 15.83*.034 + 15.83*.032,
+#                                     DESEX == 2 & COUNTRY == 4 ~ 13.64 + 13.64*.034 + 13.64*.032,
+#                                     DESEX == 2 & COUNTRY == 5 ~ 12.43 + 12.43*.034 + 12.43*.032,
+#                                     DESEX == 2 & COUNTRY == 6 ~ 9.31 + 9.31*.034 + 9.31*.032,
+#     )) %>%  # weekly earnings/ hours worked per week) 
+#     mutate(presenteeism_wpwrk = (WPPRD/10)*WPWRK) %>% # work productivity scale/ 10 * hours worked per week
+#     mutate(Indirect_cost_ABS = case_when(COUNTRY == 2 ~ Hourly_wage*WPMIS*45.39,
+#                                          COUNTRY == 3 ~ Hourly_wage*WPMIS*44.59,
+#                                          COUNTRY == 4 ~ Hourly_wage*WPMIS*45.4,
+#                                          COUNTRY == 5 ~ Hourly_wage*WPMIS*45,
+#                                          COUNTRY == 6 ~ Hourly_wage*WPMIS*44.8)) %>% # hourly wage *work hours missed absenteeism* 50 work weeks per year
+#     mutate(Indirect_cost_pres = case_when(COUNTRY == 2 ~ Hourly_wage*WPWRK*45.39,
+#                                           COUNTRY == 3 ~ Hourly_wage*WPWRK*44.59,
+#                                           COUNTRY == 4 ~ Hourly_wage*WPWRK*45.4,
+#                                           COUNTRY == 5 ~ Hourly_wage*WPWRK* 45.,
+#                                           COUNTRY == 6 ~ Hourly_wage*WPWRK*44.8)) # hourly wage * work hours missed presenteeism *50 work weeks per year
+#   data <- data  %>%          
+#     mutate(Total_indirect_cost = Indirect_cost_ABS + Indirect_cost_pres,
+#            Total_indirect_cost = case_when(is.na(WPPCTWRK) & is.na(WPIMPAIR) ~ NA_real_,
+#                                            TRUE ~ Total_indirect_cost),
+#            Total_indirect_cost = round(Total_indirect_cost, 2)) 
+#   
+#   #data <- data %>% select(-wage, -Hourly_wage, -presenteeism_wpwrk, -Indirect_cost_pres)
+#   return(data)
+#   
+# }
+# 
+# eu_mhd_sub <- indirect_costs(eu_mhd_sub)
+# 
+# 
+# # direct costs -----
+# 
+# 
+# direct_costs<- function(data){
+#   data <- data %>%
+#     mutate(Dir.Cost.TRADTMI = case_when(COUNTRY == 2 ~ TRADTMI*2*35.86,
+#                                         COUNTRY == 3 ~ TRADTMI*2*36.81, 
+#                                         COUNTRY == 4 ~ TRADTMI*2*41.05, 
+#                                         COUNTRY == 5 ~ TRADTMI*2*35.88, 
+#                                         COUNTRY == 6 ~ TRADTMI*2*36.75),
+#            Dir.Cost.ER = case_when(COUNTRY == 2 ~ RUER6Q*2*70.87,
+#                                    COUNTRY == 3 ~ RUER6Q*2*73.38, 
+#                                    COUNTRY == 4 ~ RUER6Q*2*84.88, 
+#                                    COUNTRY == 5 ~ RUER6Q*2*67.81, 
+#                                    COUNTRY == 6 ~ RUER6Q*2*68.31),
+#            Dir.Cost.HP = case_when(COUNTRY == 2 ~ RUHP6Q*2*1559.78,
+#                                    COUNTRY == 3 ~ RUHP6Q*2*1630.50, 
+#                                    COUNTRY == 4 ~ RUHP6Q*2*1387.25, 
+#                                    COUNTRY == 5 ~ RUHP6Q*2*1352.89, 
+#                                    COUNTRY == 6 ~ RUHP6Q*2*1437.31),
+#            Dir.Cost.Total = Dir.Cost.TRADTMI + Dir.Cost.ER + Dir.Cost.HP)
+#   return(data)
+#   
+# }
+# 
+# eu_mhd_sub <- direct_costs(eu_mhd_sub)
+# 
+# eu_mhd_sub <- eu_mhd_sub %>% 
+#   rename(total_indirect_cost = Total_indirect_cost,
+#                      Direct_cost = Dir.Cost.Total)
+
+
+save(eu_mhd_sub, file = './Data/MVdata.RData')

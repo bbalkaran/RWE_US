@@ -1,0 +1,27 @@
+{
+    "id": "F366CAB5",
+    "path": "C:/Users/BB089264/CE_git/RWE_US/2021_Lundbeck_Migraine/Analysis/1_MV_Data_Clean.R",
+    "project_path": "1_MV_Data_Clean.R",
+    "type": "r_source",
+    "hash": "2794440057",
+    "contents": "",
+    "dirty": false,
+    "created": 1637686393810.0,
+    "source_on_save": false,
+    "relative_order": 3,
+    "properties": {
+        "tempName": "Untitled1",
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "258,24",
+        "scrollLine": "244"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1639568788,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1639568788057,
+    "read_only": false,
+    "read_only_alternatives": []
+}
