@@ -1,5 +1,5 @@
 #  NHWS
-fname <- file.path(getPath('RWE_US'),'2018_Purdue_ADHD','Data','adhd_data.RData')
+fname <- file.path(kollekt::getPath('RWE_US'),'2018_Purdue_ADHD','Data','adhd_data.RData')
 load(fname)
 NHWS <- adhd_data[cohort=="ADHD"]
 # Linkable

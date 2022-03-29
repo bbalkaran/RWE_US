@@ -1,0 +1,83 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Jun 26 12:22:27 2020
+
+@author: arunajadais
+"""
+
+def predictOutcomes2(model,x,outcomes):
+    predicted0 = model.predict(x)
+    dim = len(predicted0)
+    predicted = pd.DataFrame(predicted0[0],columns = ["pred_" + outcomes[0]])
+    for i in range(1, dim):
+        if predicted0[i].shape[1] > 1 :
+            temp = pd.DataFrame(list(map(np.ravel, predicted0[i])),columns=["pred_" + outcomes[i] + "_" + str(j) for j in list(range(predicted0[i].shape[1]))])
+        else:
+            temp = pd.DataFrame(predicted0[i],columns = ["pred_" + outcomes[i]])
+        predicted = pd.concat([predicted.reset_index(drop=True),temp.reset_index(drop=True)], axis = 1)
+    return predicted
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Wed May 27 10:04:42 2020
+
+@author: arunajadais
+"""
+
+import numpy as np
+import pandas as pd
+import dill
+# Set up deep learning model 
+import os
+os.environ['KERAS_BACKEND'] = 'tensorflow'
+from tensorflow import keras
+
+
+def predictFuse(input_data, model_path, root_path, outcomes):
+    # Divide data into predictors (X) and outcomes (Y)
+    X_1 = input_data.copy()
+    temp = outcomes + ['zKey']
+    ind = [x in X_1.columns for x in temp]
+    if(any(ind)):
+        X_1 = X_1.drop(outcomes + ['zKey'], axis = 1)
+    with open(model_path + "RData/train_age_center", "rb")  as f:
+        train_center = dill.load(f)
+    mu =  train_center[0]
+    sigma = train_center[1]
+    # remove id
+    X = X_1.iloc[:,1:]
+    # Normalization 
+    X = X.copy()
+    X.loc[:,'age'] -= mu
+    X.loc[:,'age'] /= sigma
+    # Convert pandas data frame to numpay arrays for keras
+    X_f = X.to_numpy()
+    model_files = os.listdir(model_path + "Fused/Models")
+    MI = len(model_files)
+    fused_path = root_path + 'Fused/PredData/'
+    if not os.path.exists(fused_path):
+        os.makedirs(fused_path)
+    for m in range(MI):
+        # get predictions
+        model = keras.models.load_model(model_path + "Fused/Models/" + model_files[m]) 
+        #preds = predictOutcomes(model,X_f,outcomes)
+        #mat  = pd.concat([input_data.reset_index(drop=True),preds.reset_index(drop=True)], axis=1)
+        #mat  = mat[['kid2','age','gender'] + ["pred_" + x for x in outcomes]]
+        predicted = predictOutcomes2(model, X_f, outcomes)
+        mat  = pd.concat([input_data[['kid2','age','gender']].reset_index(drop=True),predicted.reset_index(drop=True)], axis=1)
+        mat.to_csv(fused_path + "pred_data_" + str(m+1) + ".txt", index=False)
+
+
+root_path  = "/Volumes/My Passport for Mac/KOMODO_IBD/"
+model_path = "/Volumes/My Passport for Mac/KOMODO_LINKED_2020/"  
+data_path = root_path + "RData/pred_mat.txt"
+data1 = pd.read_csv(data_path, sep='\t')
+OUTCOMES = ['PCS','MCS','SF6D_R2','EQ5DINDEX','WPPCTWRK','WPIMPAIR','WPWRKIMP','WPACTIMP','WPPRD','WPWRK','WPMIS','employed']
+predictFuse(data1, model_path, root_path, OUTCOMES)
+      
+
+
+
+
