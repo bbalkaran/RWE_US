@@ -1,0 +1,108 @@
+#########################################################
+#  Script: 1,0_Exploration_of_NP_eligible.R
+#  Purpose: Look at preventive therapy among non-prevention eligible patients
+#  Author: Bridget Balkaran, 
+#  Project: 161103482-1 Lilly Migraine Prevention 
+#  Project Manager: Jennifer Nguyen 
+#  Date Created: 5/1/19
+#  Date Edited: 5/1//19
+########################################################
+
+
+# 1. Workspace -----
+
+library(tidyverse)
+library(foreign)
+
+dat <- read.spss("./Analysis/Data/Lilly migraine data 0v1 05-October-2018(LABELLED)10112018_new.sav", to.data.frame = T)
+
+
+
+# prevention drugs: 
+    # 1. Amitriptyline =  MGRXAY
+    # 2. Botox = MGRXBT
+    # 3. Depakote = MGRXDP
+    # 4. DepakoteER = MGRXDR
+    # 5. Inderal = MGRXID
+    # 6. Topamax = MGRXTP
+    # 7. Cerena TMS  = MGRXCTS 
+    # 8. Frova = MGRXFR
+
+
+
+dat$MIG_NOT_ELIGIBLE %>% table() 
+
+not_prev_elig <- dat%>% select(zKey, source, MIG_NOT_ELIGIBLE, MGRX, MGRXAY, 
+                               MGRXBT, MGRXDP, MGRXDR, MGRXID, MGRXTP, MGRXCTS, 
+                               MGRXFR)
+not_prev_elig <- not_prev_elig %>% filter(MIG_NOT_ELIGIBLE == 1)
+prev_elig  <- dat %>% select(zKey, source, MIG_ELIGIBLE, MGRX,MGRX, MGRXAY, 
+                             MGRXBT, MGRXDP, MGRXDR, MGRXID, MGRXTP, MGRXCTS, 
+                             MGRXFR)
+prev_elig <- prev_elig %>% filter(MIG_ELIGIBLE ==1)
+
+
+not_prev_elig <-  not_prev_elig %>% 
+  mutate(on_prev = case_when(MGRXAY == "Amitriptyline (amitriptyline) "|
+                               MGRXBT == "Botox (botulinum toxin type a) "|
+                               MGRXDP == "Depakote (valproate semisodium) "|
+                               MGRXDR == "DepakoteER (divalproex sodium) "|
+                               MGRXID == "Inderal (propranolol hydrochloride) "|
+                               MGRXTP == "Topamax (topiramate) "|
+                               MGRXCTS == "Cerena TMS (transcranial magnetic stimulator) "|
+                               MGRXFR == "Frova (frovatriptan) " ~ 1,
+                             (MGRXAY == "NO TO: Amitriptyline (amitriptyline) " | is.na(MGRXAY)== T)  & 
+                               (MGRXBT == "NO TO: Botox (botulinum toxin type a) " | is.na(MGRXBT)== T) & 
+                               (MGRXDP == "NO TO: Depakote (valproate semisodium) " | is.na(MGRXDP)== T )&
+                               (MGRXDR == "NO TO: DepakoteER (divalproex sodium) " | is.na(MGRXDR)== T) & 
+                               (MGRXID == "NO TO: Inderal (propranolol hydrochloride) " | is.na(MGRXID)== T)&
+                               (MGRXTP == "NO TO: Topamax (topiramate) " | is.na(MGRXTP)== T) & 
+                               (MGRXCTS == "NO TO: Cerena TMS (transcranial magnetic stimulator) " | is.na(MGRXCTS)== T) &
+                               ( MGRXFR == "NO TO: Frova (frovatriptan) " | is.na(MGRXFR) == T) ~ 0))
+           # case_when(MGTPAY == "Prevention " | MGTPBT == "Prevention " | MGTPDP == "Prevention "|
+           #                     MGTPDR == "Prevention " | MGTPID == "Prevention " | 
+           #                     MGTPNE == "Prevention " | MGTPTP == "Prevention " ~ 1,
+           #                   (MGTPAY == "Treatment " | is.na(MGTPAY)== T)  & 
+           #                     (MGTPBT == "Treatment " | is.na(MGTPBT)== T) & 
+           #                     (MGTPDP == "Treatment " | is.na(MGTPDP)== T )&
+           #                     (MGTPDR == "Treatment " | is.na(MGTPDR)== T) & 
+           #                     (MGTPID == "Treatment " | is.na(MGTPID)== T) &
+           #                     (MGTPNE == "Treatment " | is.na(MGTPNE)== T) &
+           #                     (MGTPTP == "Treatment " | is.na(MGTPTP)== T)~ 0))
+
+
+table(not_prev_elig$MIG_NOT_ELIGIBLE, not_prev_elig$on_prev)
+
+
+
+prev_elig <- prev_elig %>% 
+  mutate(on_prev = case_when(MGRXAY == "Amitriptyline (amitriptyline) "|
+                             MGRXBT == "Botox (botulinum toxin type a) "|
+                             MGRXDP == "Depakote (valproate semisodium) "|
+                             MGRXDR == "DepakoteER (divalproex sodium) "|
+                             MGRXID == "Inderal (propranolol hydrochloride) "|
+                             MGRXTP == "Topamax (topiramate) "|
+                             MGRXCTS == "Cerena TMS (transcranial magnetic stimulator) "|
+                             MGRXFR == "Frova (frovatriptan) " ~ 1,
+                                                  (MGRXAY == "NO TO: Amitriptyline (amitriptyline) " | is.na(MGRXAY)== T)  & 
+                                                    (MGRXBT == "NO TO: Botox (botulinum toxin type a) " | is.na(MGRXBT)== T) & 
+                                                    (MGRXDP == "NO TO: Depakote (valproate semisodium) " | is.na(MGRXDP)== T )&
+                                                    (MGRXDR == "NO TO: DepakoteER (divalproex sodium) " | is.na(MGRXDR)== T) & 
+                                                    (MGRXID == "NO TO: Inderal (propranolol hydrochloride) " | is.na(MGRXID)== T)&
+                                                    (MGRXTP == "NO TO: Topamax (topiramate) " | is.na(MGRXTP)== T) & 
+                                                     (MGRXCTS == "NO TO: Cerena TMS (transcranial magnetic stimulator) " | is.na(MGRXCTS)== T) &
+                                                     ( MGRXFR == "NO TO: Frova (frovatriptan) " | is.na(MGRXFR) == T) ~ 0))
+           # case_when(MGTPAY == "Prevention " | MGTPBT == "Prevention " | MGTPDP == "Prevention "|
+           #                     MGTPDR == "Prevention " | MGTPID == "Prevention " | 
+           #                     MGTPNE == "Prevention " | MGTPTP == "Prevention " ~ 1,
+           #                   (MGTPAY == "Treatment " | is.na(MGTPAY)== T)  & 
+           #                     (MGTPBT == "Treatment " | is.na(MGTPBT)== T) & 
+           #                     (MGTPDP == "Treatment " | is.na(MGTPDP)== T )&
+           #                     (MGTPDR == "Treatment " | is.na(MGTPDR)== T) & 
+           #                     (MGTPID == "Treatment " | is.na(MGTPID)== T) &
+           #                     (MGTPNE == "Treatment " | is.na(MGTPNE)== T) &
+           #                     (MGTPTP == "Treatment " | is.na(MGTPTP)== T)~ 0))
+table(prev_elig$MIG_ELIGIBLE, prev_elig$on_prev)
+
+
+
