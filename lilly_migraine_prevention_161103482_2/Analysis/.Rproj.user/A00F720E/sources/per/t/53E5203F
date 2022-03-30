@@ -1,0 +1,26 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1564170518637.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "317630047",
+    "id" : "53E5203F",
+    "lastKnownWriteTime" : 1564431062,
+    "last_content_update" : 1564431062969,
+    "path" : "C:/Users/balkaranb/OneDrive - Kantar/Projects/Lilly Migraine Prevention Phase II/Analysis/Code/Migraine_related_visits.R",
+    "project_path" : "Code/Migraine_related_visits.R",
+    "properties" : {
+        "cursorPosition" : "16,0",
+        "scrollLine" : "0",
+        "tempName" : "Untitled2"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 6,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
