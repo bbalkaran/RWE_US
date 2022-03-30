@@ -1,0 +1,36 @@
+---
+title: "Determining Site of Care For IV IG Patients"
+author: "Kantar, Health Division"
+date: "12/11/2019"
+output: word_document
+---
+
+Claims data includes open and closed claims medical and pharmacy claims for patients that had any of the NDC or J code inclusion codes. Patients were identifies as 3 distinct categories of care: Hospital, Non-hospital, and Hospital/ Non-Hospital. Patients considered tp receive IG treatments from hospital sites had: 
+
+    - only claims with an Institutional type identifier (Claim type = Institutional)
+    
+    - an admit type code or discharge status code present in the data
+    
+    - CMS place of service codes indicating a hospital or institutional hospital-affiliated site of care (Place of service = 19, 21, 22, 23 or 24)
+    
+    - NPI (National Provider Index) taxonomy description associated with a hospital facility or hospital physician
+    
+  If a patients only had claims associated with any of the above criteria they were grouped as patients who received IG treatments at a hospital. Patients without a claim type identifier, admit type code, discharge status code or CMS place of service code indicating a hospital location were evaluated at the claim level using NPI taxonomy descriptions. NPI fields are available for each claim identifying the attending provider (attending NPI), the provider associated with billing (billing NPI), and the facility at which the service was rendered (facility NPI), each of which is populated differently for each patient. A hierarchy was used for identifying one NPI taxonomy description per claim. The billing NPI was considered first, followed by the attending NPI if billing was unavailable and facility NPI if both billing and attending were unavailable. This hierarchy was based on the availability of the present NPI fields within claims. The NPI taxonomy description was then used to identify the site of care for the claim as hospital or non-hospital. If a patient had no NPI information for any of the three fields CMS place of service code was used to identify the site of care. If the three NPI fields, CMS place of service code, and all of the above criteria associated with a hospital visit was missing the claim was dropped from analysis as the site of care could not be confidently identified. Patients with pharmacy data within a 30 day window from a medical claim identifies as "Durable Medical Equipment" were included in the non-hospital group. Patients having data identifying care was provided at both hospital and non-hospital sites were identified and will be included in the hospital/non-hospital group. A total of 164,431 patients were identifier for inclusion in the cohort. The groupings are specfieied in Table X. 
+  
+
+Table X, Site of Care
+
+```{r echo=FALSE}
+library(knitr)
+`Site of Care` <- c("Hospital", "Non-Hospital", "Hospital/Non-Hospital", "Total")
+`Count (n)` <- c(102353, 8380, 53698, 164431)
+`Percent (%)` <- c(62, 5, 33, 100) 
+mat <- cbind(`Site of Care`, `Count (n)`, `Percent (%)`)
+kable(mat)
+```
+
+  
+  
+
+  
+    

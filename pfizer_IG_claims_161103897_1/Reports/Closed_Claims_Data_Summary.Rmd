@@ -1,0 +1,487 @@
+---
+title: 'IV IG: Closed Claims Summary'
+author: "Kantar, Health Division"
+date: "11/13/2019"
+output:
+  word_document: default
+  html_document: default
+---
+
+
+
+```{r include=FALSE}
+
+library(tidyverse)
+library(qwraps2)
+load("C:/Users/balkaranb/OneDrive - Kantar/Projects/Pfizer IG/Data/Clean/Visits_and_taxonomies.RData")
+
+my_n_percent <- function(x) {
+  n_perc0(x, na_rm = T, show_symbol = T)
+}
+options("qwraps2_markup" = "markdown")
+```
+
+# Goals: 
+
+
+- 1. identify unique patients
+
+
+- 1A. identify hospital vs non-hospital vs hospital/non-hospital for each patient
+
+
+- 2. identify where patients are receiving their 1st, 2nd, and 3rd treatment vs 4+ treatments
+
+
+
+# Tasks by goal: 
+
+- Goal 1 and 1A. Deduplicate claims and visits
+
+    - determine visits per patient
+    
+    - determine hospital vs non-hospital vs hospital/non-hospital for each patient ("Visit Types")
+    
+    - decide based on visit type whether a patient can be considered hospital vs vs non-hospital vs hospital/non-hospital 
+    
+- Goal 3. Determine sequence of visits with Closed Claims
+
+    - Percent of patient with Closed Claims 
+    
+    - Determine sites for 1st, 2nd, 3rd, and 4+ visits
+    
+    
+## Goal 1 and 1A
+
+To complete goal 1 and 1A, we need to 
+
+- 1. Collapse the NPI taxonomies where possible  --> Assigned to Pfizer
+
+- 2. Identify which NPI taxonomies are considered a hospital site or a non-hopital site --> Pfizer, or Pfizer and Kantar to discuss
+
+- 3. Identify the sites for each patient and, make a decision on whether a patient gets treatment at a hospital or non-hospital site  --> Kantar after 1 and 2 are decided on
+
+- 4. Determine a time-window appropriate for linking a pharmacy visit to a medical visit 
+
+
+
+# Goal 2: Identify where patients are receiving their 1st, 2nd, and 3rd treatment vs 4+ treatments
+    
+Of the 219,602 patients in the open claims data, 97,630 or *44% have closed claims*. From these claims, we explore the sites of care for the 1st, 2nd, 3rd, and 4+ visits and where the patients are receiving these visits. 
+
+```{r eval=FALSE, include=FALSE}
+a <- list(
+    "Number of Visits" = 
+        list("Min" = ~ min(Visit),
+             "1 Visit" = ~ my_n_percent(Visit == 1),
+             "25th Percentile" = ~ quantile(Visit, 0.25),
+             "6 Visits" = ~ my_n_percent(Visit == 6),
+             "Median" = ~ median(Visit, na.rm = T),
+             "15 Visits" = ~ my_n_percent(Visit == 15),
+             "Mean (SD)" = ~ mean_sd(Visit),
+             "26 Visits" = ~ my_n_percent(Visit == 26),
+             "75th Percentile" = ~ quantile(Visit, 0.75),
+             "33 Visits" = ~ my_n_percent(Visit == 33),
+             "Max" = ~ max(Visit),
+             "448 Visits" = ~ my_n_percent(Visit == 448)))
+b <- pt_visit_NPI %>% group_by(patient_id) %>% mutate(Visit = max(Visit_id)) %>% 
+    select(patient_id, Visit) %>% slice(1)
+summary_table(b, a)
+```
+
+
+
+The maximum of visit for each patient range from 1 to 448 visits.  The patient who has 448 visits has only institutional claims. Number of visits is then categorized into 1, 2, 3, and 4+ visits. 
+
+```{r include=FALSE}
+pt_visit_NPI2 <-  pt_visit_NPI %>% 
+    mutate(Cat_Visits = 
+               case_when(Visit_id == 1 ~ "1",
+                         Visit_id == 2 ~ "2", 
+                         Visit_id == 3 ~ "3",
+                         Visit_id >= 4 ~ "4+")) %>% 
+    select(patient_id, Cat_Visits, claim_type_code, provider_taxonomy_desc) %>% distinct()
+```
+
+
+```{r echo=FALSE, results='asis'}
+d <- list(
+  "Provider Taxonomy Descriptions" = list(
+    "Agencies Home Health" = ~ my_n_percent(provider_taxonomy_desc == "Agencies Home Health"),
+         "Agencies Hospice Care Community Based" = ~ my_n_percent(provider_taxonomy_desc == "Agencies Hospice Care Community Based"),
+         "Agencies Public Health or Welfare" = ~ my_n_percent(provider_taxonomy_desc == "Agencies Public Health or Welfare"),
+         "Agencies Voluntary or Charitable" = ~ my_n_percent(provider_taxonomy_desc == "Agencies Voluntary or Charitable"),
+         "Dermatology Procedural Dermatology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic &Osteopathic Physicians Dermatology Procedural Dermatology"),
+         "Advanced Heart Failure and Transplant Cardiology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Advanced Heart Failure and Transplant Cardiology"),
+         "Allergy and Immunology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Allergy and Immunology"),
+         "Allergy and Immunology Clinical and Laboratory Immunology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Allergy and Immunology Clinical and Laboratory Immunology"),
+         "Anesthesiology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Anesthesiology"),
+         "Anesthesiology Critical Care Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Anesthesiology Critical Care Medicine"),
+         "Anesthesiology Pain Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Anesthesiology Pain Medicine"),
+         "Colon and Rectal Surgery" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Colon and Rectal Surgery"),
+         "Dermatology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Dermatology"),
+         "Dermatology Clinical and Laboratory Dermatological Immunology" = ~ my_n_percent(provider_taxonomy_desc == "Dermatology Clinical and Laboratory Dermatological Immunology"),
+         "Dermatology Dermapathology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Dermatology Dermapathology"),
+         "Dermatology Pediatric Dermatology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Dermatology Pediatric Dermatology"),
+         "Emergency Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Emergency Medicine"),
+         "Emergency Medicine Emergency Medical Services" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Emergency Medicine Emergency Medical Services"),
+         "Emergency Medicine Medical Toxicology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Emergency Medicine Medical Toxicology"),
+         "Emergency Medicine Pediatric Emergency Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Emergency Medicine Pediatric Emergency Medicine"),
+         "Family Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Family Medicine"),
+         "Family Medicine Adolescent Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Family Medicine Adolescent Medicine"),
+         "Family Medicine Adult Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Family Medicine Adult Medicine"),
+         "Family Medicine Geriatric Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Family Medicine Geriatric Medicine"),
+         "Family Medicine Hospice and Palliative Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Family Medicine Hospice and Palliative Medicine"),
+         "General Practice" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians General Practice"),
+         "Hospitalist" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Hospitalist"),
+         "Internal Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Internal Medicine"),
+         "Internal Medicine Addiction Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Internal Medicine Addiction Medicine"),
+         "Internal Medicine Adolescent Medicine" = ~ my_n_percent(provider_taxonomy_desc == "	Allopathic and Osteopathic Physicians Internal Medicine Adolescent Medicine"),
+         "Internal Medicine Allergy and Immunology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Internal Medicine Allergy and Immunology"),
+         "Internal Medicine Bariatric Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Internal Medicine Bariatric Medicine"),
+         "Internal Medicine Cardiovascular Disease" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Internal Medicine Cardiovascular Disease"),
+         "Internal Medicine Clinical and Laboratory Immunology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Internal Medicine Clinical and Laboratory Immunology"),
+         "Internal Medicine Clinical Cardiatric Electrophysiology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Internal Medicine Clinical Cardiatric Electrophysiology"),
+         "Allopathic and Osteopathic Physicians Colon and Rectal Surgery" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Colon and Rectal Surgery"),
+         "Internal Medicine Critical Care Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Internal Medicine Critical Care Medicine"),
+         "Internal Medicine Endocrinology Diabetes and Metabolism" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Internal Medicine Endocrinology Diabetes and Metabolism"),
+         "Internal Medicine Gastroenterology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Internal Medicine Gastroenterology"),
+         "Internal Medicine Hematology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Internal Medicine Hematology"),
+         "Internal Medicine Hematology and Oncology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Internal Medicine Hematology and Oncology"),
+         "Internal Medicine Hepatology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Internal Medicine Hepatology"),
+         "Internal Medicine Infectious Disease" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Internal Medicine Infectious Disease"),
+         "Internal Medicine Interventional Cardiology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Internal Medicine Interventional Cardiology"),
+         "Internal Medicine Medical Oncology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Internal Medicine Medical Oncology"),
+           "Internal Medicine Nephrology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Internal Medicine Nephrology"),
+           "Internal Medicine Pulmonary Disease" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Internal Medicine Pulmonary Disease"),
+           "Internal Medicine Rheumatology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Internal Medicine Rheumatology"),
+           "Internal Medicine Sleep Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Internal Medicine Sleep Medicine"),
+           "Internal Medicine Transplant Hepatology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Internal Medicine Transplant Hepatology"),
+           "Neurological Surgery" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Neurological Surgery"),
+           "Neuromusculoskeletal Medicine and OMM" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Neuromusculoskeletal Medicine and OMM"),
+           "Neuromusculoskeletal Medicine Sports Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Neuromusculoskeletal Medicine Sports Medicine"),
+           "Nuclear Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Nuclear Medicine"),
+    
+         "Nuclear Medicine Nuclear Imaging and Therapy" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Nuclear Medicine Nuclear Imaging and Therapy"),
+         "Obstetrics and Gynecology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Obstetrics and Gynecology"),
+         "Obstetrics and Gynecology Gynecologic Oncology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Obstetrics and Gynecology Gynecologic Oncology"),
+         "Obstetrics and Gynecology Gynecology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Obstetrics and Gynecology Gynecology"),
+         "Obstetrics and Gynecology Maternal and Fetal Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Obstetrics and Gynecology Maternal and Fetal Medicine"),
+         "Obstetrics and Gynecology Obstetrics" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Obstetrics and Gynecology Obstetrics"),
+         "Obstetrics and Gynecology Reproductive Endocrinology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Obstetrics and Gynecology Reproductive Endocrinology"),
+         "Ophthalmic Plastic and Reconstructive Surgery" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Ophthalmic Plastic and Reconstructive Surgery"),
+         "Ophthalmology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Ophthalmology"),
+         "Ophthalmology Dental Providers Dentist" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Ophthalmology Dental Providers Dentist"),
+         "Ophthalmology Dental Providers Dentist Oral and Maxillofacial Surgery" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Ophthalmology Dental Providers Dentist Oral and Maxillofacial Surgery"),
+         "Ophthalmology Glaucoma Specialist" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Ophthalmology Glaucoma Specialist"),
+         "Oral and Maxillofacial Surgery" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Oral and Maxillofacial Surgery"),
+         "Orthopedic Surgery" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Orthopedic Surgery"),
+         "Orthopedic Surgery Adult Reconstructive Orthopedic Surgery" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Orthopedic Surgery Adult Reconstructive Orthopedic Surgery"),
+         "Orthopedic Surgery Foot and Ankle Surgery" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Orthopedic Surgery Foot and Ankle Surgery"),
+         "Orthopedic Surgery Hand Surgery" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Orthopedic Surgery Hand Surgery"),
+         "Orthopedic Surgery Orthopedic Surgery of the Spine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Orthopedic Surgery Orthopedic Surgery of the Spine"),
+         "Orthopedic Surgery Orthopedic Trauma" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Orthopedic Surgery Orthopedic Trauma"),
+         "Orthopedic Surgery Sports Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Orthopedic Surgery Sports Medicine"),
+         "Otolaryngology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Otolaryngology"),
+         "Otolaryngology Facial Plastic Surgery" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Otolaryngology Facial Plastic Surgery" | provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Otolaryngology Otolaryngology/Facial Plastic Surgery"),
+         "Otolaryngology Otolaryngic Allergy" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Otolaryngology Otolaryngic Allergy"),
+         "Otolaryngology Otology & Neurotology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Otolaryngology Otology &Neurotology"),
+         "Otolaryngology Pediatric Otolaryngology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Otolaryngology Pediatric Otolaryngology"),
+         "Otolaryngology Plastic Surgery within the Head and Neck" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Otolaryngology Plastic Surgery within the Head and Neck"),
+         "Pain Medicine Interventional Pain Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Pain Medicine Interventional Pain Medicine"),
+         "Pain Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Pain Medicine Pain Medicine"),
+         "Pathology Anatomic Pathology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Pathology Anatomic Pathology"),
+         "Pathology Anatomic Pathology and Clinical Pathology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Pathology Anatomic Pathology and Clinical Pathology"),
+         "Pathology Clinical Pathology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Pathology Clinical Pathology"),
+           "Pathology Clinical Pathology Laboratory Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Pathology Clinical Pathology Laboratory Medicine"),
+           "Pathology Cytopathology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Pathology Cytopathology"),
+           "Pathology Dermapathology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Pathology Dermapathology"),
+           "Pathology Hematology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Pathology Hematology"),
+           "Pathology Immunopathology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Pathology Immunopathology"),
+           "Pathology Molecular Genetic Pathology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Pathology Molecular Genetic Pathology"),
+           "Pathology Neuropathology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Pathology Neuropathology"),
+           "Pediatrics" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Pediatrics"),
+           "Adolescent Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Pediatrics Adolescent Medicine"),
+           "Pediatrics Developmental–Behavioral Pediatrics" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Pediatrics Developmental–Behavioral Pediatrics"),
+           "Pediatrics Neonatal-Perinatal Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Pediatrics Neonatal-Perinatal Medicine"),
+           "Pediatrics Neurodevelopmental Disabilities" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Pediatrics Neurodevelopmental Disabilities"),
+           "Pediatrics Pediatric Allergy and Immunology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Pediatrics Pediatric Allergy and Immunology"),
+           "Pediatrics Pediatric Cardiology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Pediatrics Pediatric Cardiology"),
+           "Pediatric Critical Care Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Pediatrics Pediatric Critical Care Medicine"),
+           "Pediatrics Pediatric Emergency Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Pediatrics Pediatric Emergency Medicine"),
+           "Pediatrics Pediatric Endocrinology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Pediatrics Pediatric Endocrinology"),
+           "Pediatric Gastroenterology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Pediatrics Pediatric Gastroenterology"),
+           "Pediatrics Pediatric Hematology-Oncology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Pediatrics Pediatric Hematology-Oncology"),
+           "Pediatrics Pediatric Infectious Diseases" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Pediatrics Pediatric Infectious Diseases"),
+           "Pediatrics Pediatric Nephrology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Pediatrics Pediatric Nephrology"),
+           "Pediatrics Pediatric Pulmonology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Pediatrics Pediatric Pulmonology"),
+         "Pediatrics Pediatric Rheumatology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Pediatrics Pediatric Rheumatology"),
+         "Pediatrics Pediatric Transplant Hepatology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Pediatrics Pediatric Transplant Hepatology"),
+         "Pediatrics Sleep Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Pediatrics Sleep Medicine"),
+         "Physical Medicine and Rehabilitation" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Physical Medicine and Rehabilitation"),
+         "Physical Medicine and Rehabilitation Hospice and Palliative Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Physical Medicine and Rehabilitation Hospice and Palliative Medicine"),
+         "Physical Medicine and Rehabilitation Neuromuscular Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Physical Medicine and Rehabilitation Neuromuscular Medicine"),
+         "Physical Medicine and Rehabilitation Pain Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Physical Medicine and Rehabilitation Pain Medicine"),
+         "Physical Medicine and Rehabilitation Pediatric Rehabilitation Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Physical Medicine and Rehabilitation Pediatric Rehabilitation Medicine"),
+         "Physical Medicine and Rehabilitation Spinal Cord Injury Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Physical Medicine and Rehabilitation Spinal Cord Injury Medicine"),
+         "Physical Medicine and Rehabilitation Sports Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Physical Medicine and Rehabilitation Sports Medicine"),
+         "Physicians Plastic Surgery" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Plastic Surgery"),
+         "Plastic Surgery Surgery of the Hand" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Plastic Surgery Surgery of the Hand"),
+         "Preventive Medicine Public Health and General Preventive Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Preventive Medicine Public Health and General Preventive Medicine"),
+         "Preventive Medicine Undersea and Hyperbaric Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Preventive Medicine Undersea and Hyperbaric Medicine"),
+         "Psychiatry" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Psychiatry"),
+         "Psychiatry and Neurology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Psychiatry and Neurology"),
+         "Psychiatry and Neurology Child and Adolescent Psychiatry" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Psychiatry and Neurology Child and Adolescent Psychiatry"),
+         "Psychiatry and Neurology Clinical Neurophysiology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Psychiatry and Neurology Clinical Neurophysiology"),
+         "Psychiatry and Neurology Diagnostic Neuroimaging" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Psychiatry and Neurology Diagnostic Neuroimaging"),
+         "Psychiatry and Neurology Neurocritical Care" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Psychiatry and Neurology Neurocritical Care"),
+         "Psychiatry and Neurology Neurology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Psychiatry and Neurology Neurology"),
+         "Psychiatry and Neurology Neurology with Special Qualifications in Child Neurology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Psychiatry and Neurology Neurology with Special Qualifications in Child Neurology"),
+         "Psychiatry and Neurology Neuromuscular Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Psychiatry and Neurology Neuromuscular Medicine"),
+         "Psychiatry and Neurology Pain Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Psychiatry and Neurology Pain Medicine"),
+         "Psychiatry and Neurology Sleep Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Psychiatry and Neurology Sleep Medicine"),
+         "Psychiatry and Neurology Vascular Neurology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Psychiatry and Neurology Vascular Neurology"),
+         "Radiology Diagnostic Radiology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Radiology Diagnostic Radiology"),
+         "Radiology Radiation Oncology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Radiology Radiation Oncology"),
+         "Radiology Vascular and Interventional Radiology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Radiology Vascular and Interventional Radiology"),
+         "Surgery" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Surgery"),
+         "Surgery Pediatric Surgery" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Surgery Pediatric Surgery"),
+         "Surgery Plastic and Reconstructive Surgery" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Surgery Plastic and Reconstructive Surgery"),
+         "Surgery Surgery of the Hand" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Surgery Surgery of the Hand"),
+         "Surgery Surgical Critical Care" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Surgery Surgical Critical Care"),
+         "Surgery Surgical Oncology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Surgery Surgical Oncology"),
+         "Surgery Vascular Surgery" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Surgery Vascular Surgery"),
+         "Thoracic Surgery (Cardiothoracic Vascular Surgery)" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Thoracic Surgery (Cardiothoracic Vascular Surgery)"),
+         "Transplant Surgery" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Transplant Surgery"),
+         "Urology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Urology"),
+         "Urology Pediatric Urology" = ~ my_n_percent(provider_taxonomy_desc == "Allopathic and Osteopathic Physicians Urology Pediatric Urology"),
+         "Ambulatory Health Care Facilities Clinic-Center Ambulatory Surgical" = ~ my_n_percent(provider_taxonomy_desc == "Ambulatory Health Care Facilities Clinic-Center Ambulatory Surgical"),
+         "Ambulatory Health Care Facilities Clinic-Center Radiology Mammography" = ~ my_n_percent(provider_taxonomy_desc == "Ambulatory Health Care Facilities Clinic-Center Radiology Mammography"),
+         "Ambulatory Health Care Facilities Clinic-Center Radiology Mobile Mammography" = ~ my_n_percent(provider_taxonomy_desc == "Ambulatory Health Care Facilities Clinic-Center Radiology Mobile Mammography"),
+         "Ambulatory Health Care Facilities Clinic Center Mental Health" = ~ my_n_percent(provider_taxonomy_desc == "Ambulatory Health Care Facilities Clinic Center Mental Health"),
+         "Ambulatory Health Care Facilities Clinic Center Multi-Specialty" = ~ my_n_percent(provider_taxonomy_desc == "Ambulatory Health Care Facilities Clinic Center Multi-Specialty"),
+         "Ambulatory Health Care Facilities Clinic Center Physical Therapy" = ~ my_n_percent(provider_taxonomy_desc == "Ambulatory Health Care Facilities Clinic Center Physical Therapy"),
+         "Ambulatory Health Care Facilities Clinic Center Radiology" = ~ my_n_percent(provider_taxonomy_desc == "Ambulatory Health Care Facilities Clinic Center Radiology"),
+         "Ambulatory Health Care Facilities Clinic Center Rehabilitation" = ~ my_n_percent(provider_taxonomy_desc == "Ambulatory Health Care Facilities Clinic Center Rehabilitation"),
+         "Ambulatory Health Care Facilities Clinic Center Rehabilitation Comprehensive Outpatient Rehabilitation Facility (CORF)" = ~ my_n_percent(provider_taxonomy_desc == "Ambulatory Health Care Facilities Clinic Center Rehabilitation Comprehensive Outpatient Rehabilitation Facility (CORF)"),
+         "Ambulatory Health Care Facilities Clinic Center Rural Health" = ~ my_n_percent(provider_taxonomy_desc == "Ambulatory Health Care Facilities Clinic Center Rural Health"),
+         "Ambulatory Health Care Facilities End-Stage Renal Disease (ESRD) Treatment" = ~ my_n_percent(provider_taxonomy_desc == "Ambulatory Health Care Facilities End-Stage Renal Disease (ESRD) Treatment"),
+         "Ambulatory Health Care Facilities Federally Qualified Health Center (FQHC)" = ~ my_n_percent(provider_taxonomy_desc == "Ambulatory Health Care Facilities Federally Qualified Health Center (FQHC)"),
+         "Behavioral Health and Social Service Providers Psychologist" = ~ my_n_percent(provider_taxonomy_desc == "Behavioral Health and Social Service Providers Psychologist"),
+         "Behavioral Health and Social Service Providers Psychologist Addiction (Substance Abuse Disorder)" = ~ my_n_percent(provider_taxonomy_desc == "Behavioral Health and Social Service Providers Psychologist Addiction (Substance Abuse Disorder)"),
+         "Behavioral Health and Social Service Providers Psychologist Clinical" = ~ my_n_percent(provider_taxonomy_desc == "Behavioral Health and Social Service Providers Psychologist Clinical"),
+         "Behavioral Health and Social Service Providers Psychologist Clinical Child and Adolescent" = ~ my_n_percent(provider_taxonomy_desc == "Behavioral Health and Social Service Providers Psychologist Clinical Child and Adolescent"),
+         "Behavioral Health and Social Service Providers Psychologist Cognitive and Behavioral" = ~ my_n_percent(provider_taxonomy_desc == "Behavioral Health and Social Service Providers Psychologist Cognitive and Behavioral"),
+         "Behavioral Health and Social Service Providers Psychologist Counseling" = ~ my_n_percent(provider_taxonomy_desc == "Behavioral Health and Social Service Providers Psychologist Counseling"),
+         "Behavioral Health and Social Service Providers Psychologist Health" = ~ my_n_percent(provider_taxonomy_desc == "Behavioral Health and Social Service Providers Psychologist Health"),
+         "Behavioral Health and Social Service Providers Social Worker Clinical" = ~ my_n_percent(provider_taxonomy_desc == "Behavioral Health and Social Service Providers Social Worker Clinical"),
+         "Chiropractic Providers Chiropractor" = ~ my_n_percent(provider_taxonomy_desc == "Chiropractic Providers Chiropractor"),
+         "Chiropractic Providers Chiropractor Occupational Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Chiropractic Providers Chiropractor Occupational Medicine"),
+         "Chiropractic Providers Chiropractor Rehabilitation" = ~ my_n_percent(provider_taxonomy_desc == "Chiropractic Providers Chiropractor Rehabilitation"),
+         "Dietary and Nutritional Service Providers Dietician Registered" = ~ my_n_percent(provider_taxonomy_desc == "Dietary and Nutritional Service Providers Dietician Registered"),
+         "Dietary and Nutritional Service Providers Dietician Registered Nutrition Pediatric" = ~ my_n_percent(provider_taxonomy_desc == "Dietary and Nutritional Service Providers Dietician Registered Nutrition Pediatric"),
+         "Eye and Vision Service Providers Optometrist" = ~ my_n_percent(provider_taxonomy_desc == "Eye and Vision Service Providers Optometrist"),
+         "Eye and Vision Service Providers Optometrist Corneal and Contact Management" = ~ my_n_percent(provider_taxonomy_desc == "Eye and Vision Service Providers Optometrist Corneal and Contact Management"),
+         "Eye and Vision Service Providers Technician Technologist Optician" = ~ my_n_percent(provider_taxonomy_desc == "Eye and Vision Service Providers Technician Technologist Optician"),
+         "Female Pelvic Medicine and Reconstructive Surgery" = ~ my_n_percent(provider_taxonomy_desc == "Female Pelvic Medicine and Reconstructive Surgery"),
+         "Group Single-Specialty" = ~ my_n_percent(provider_taxonomy_desc == "Group Single-Specialty"),
+         "Hospital Units Medicare Defined Swing Bed Unit" = ~ my_n_percent(provider_taxonomy_desc == "Hospital Units Medicare Defined Swing Bed Unit"),
+         "Hospital Units Psychiatric Unit" = ~ my_n_percent(provider_taxonomy_desc == "Hospital Units Psychiatric Unit"),
+         "Hospital Units Rehabilitation Unit" = ~ my_n_percent(provider_taxonomy_desc == "Hospital Units Rehabilitation Unit"),
+         "Hospitals General Acute Care Hospital" = ~ my_n_percent(provider_taxonomy_desc == "Hospitals General Acute Care Hospital"),
+         "Hospitals General Acute Care Hospital Children" = ~ my_n_percent(provider_taxonomy_desc == "Hospitals General Acute Care Hospital Children"),
+         "Hospitals General Acute Care Hospital Critical Access" = ~ my_n_percent(provider_taxonomy_desc == "Hospitals General Acute Care Hospital Critical Access"),
+         "Hospitals Long Term Care Hospital" = ~ my_n_percent(provider_taxonomy_desc == "Hospitals Long Term Care Hospital"),
+         "Hospitals Psychiatric Hospital" = ~ my_n_percent(provider_taxonomy_desc == "Hospitals Psychiatric Hospital"),
+         "Hospitals Rehabilitation Hospital" = ~ my_n_percent(provider_taxonomy_desc == "Hospitals Rehabilitation Hospital"),
+         "Hospitals Special(ty) Hospital" = ~ my_n_percent(provider_taxonomy_desc == "Hospitals Special(ty) Hospital"),
+         "Internal Medicine Hospice and Palliative Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Internal Medicine Hospice and Palliative Medicine"),
+         "Laboratories Clinical Medical Laboratory" = ~ my_n_percent(provider_taxonomy_desc == "Laboratories Clinical Medical Laboratory"),
+         "Laboratories Physiological Laboratory" = ~ my_n_percent(provider_taxonomy_desc == "Laboratories Physiological Laboratory"),
+         "Nursing and Custodial Care Facilities Nursing Facility" = ~ my_n_percent(provider_taxonomy_desc == "Nursing and Custodial Care Facilities Nursing Facility"),
+         "Nursing and Custodial Care Facilities Skilled Nursing Facility" = ~ my_n_percent(provider_taxonomy_desc == "Nursing and Custodial Care Facilities Skilled Nursing Facility"),
+         "Physician Assistants and Advanced Practice Nursing Providers Clinical Nurse Specialist" = ~ my_n_percent(provider_taxonomy_desc == "Physician Assistants and Advanced Practice Nursing Providers Clinical Nurse Specialist"),
+         "Physician Assistants and Advanced Practice Nursing Providers Clinical Nurse Specialist Acute Care" = ~ my_n_percent(provider_taxonomy_desc == "Physician Assistants and Advanced Practice Nursing Providers Clinical Nurse Specialist Acute Care"),
+         "Physician Assistants and Advanced Practice Nursing Providers Clinical Nurse Specialist Adult Health" = ~ my_n_percent(provider_taxonomy_desc == "Physician Assistants and Advanced Practice Nursing Providers Clinical Nurse Specialist Adult Health"),
+         "Physician Assistants and Advanced Practice Nursing Providers Clinical Nurse Specialist Family Health" = ~ my_n_percent(provider_taxonomy_desc == "Physician Assistants and Advanced Practice Nursing Providers Clinical Nurse Specialist Family Health"),
+         "Physician Assistants and Advanced Practice Nursing Providers Clinical Nurse Specialist Oncology" = ~ my_n_percent(provider_taxonomy_desc == "Physician Assistants and Advanced Practice Nursing Providers Clinical Nurse Specialist Oncology"),
+         "Physician Assistants and Advanced Practice Nursing Providers Clinical Nurse Specialist Oncology Pediatrics" = ~ my_n_percent(provider_taxonomy_desc == "Physician Assistants and Advanced Practice Nursing Providers Clinical Nurse Specialist Oncology Pediatrics"),
+         "Physician Assistants and Advanced Practice Nursing Providers Clinical Nurse Specialist Pediatrics" = ~ my_n_percent(provider_taxonomy_desc == "Physician Assistants and Advanced Practice Nursing Providers Clinical Nurse Specialist Pediatrics"),
+         "Physician Assistants and Advanced Practice Nursing Providers Nurse Anesthetist Certified Registered" = ~ my_n_percent(provider_taxonomy_desc == "Physician Assistants and Advanced Practice Nursing Providers Nurse Anesthetist Certified Registered"),
+         "Physician Assistants and Advanced Practice Nursing Providers Nurse Practitioner" = ~ my_n_percent(provider_taxonomy_desc == "Physician Assistants and Advanced Practice Nursing Providers Nurse Practitioner"),
+         "Physician Assistants and Advanced Practice Nursing Providers Nurse Practitioner Acute Care" = ~ my_n_percent(provider_taxonomy_desc == "Physician Assistants and Advanced Practice Nursing Providers Nurse Practitioner Acute Care"),
+         "Physician Assistants and Advanced Practice Nursing Providers Nurse Practitioner Adult Health" = ~ my_n_percent(provider_taxonomy_desc == "Physician Assistants and Advanced Practice Nursing Providers Nurse Practitioner Adult Health"),
+         "Physician Assistants and Advanced Practice Nursing Providers Nurse Practitioner Family" = ~ my_n_percent(provider_taxonomy_desc == "Physician Assistants and Advanced Practice Nursing Providers Nurse Practitioner Family"),
+         "Physician Assistants and Advanced Practice Nursing Providers Nurse Practitioner Gerontology" = ~ my_n_percent(provider_taxonomy_desc == "Physician Assistants and Advanced Practice Nursing Providers Nurse Practitioner Gerontology"),
+         "Physician Assistants and Advanced Practice Nursing Providers Nurse Practitioner Neonatal" = ~ my_n_percent(provider_taxonomy_desc == "Physician Assistants and Advanced Practice Nursing Providers Nurse Practitioner Neonatal"),
+         "Physician Assistants and Advanced Practice Nursing Providers Nurse Practitioner Obstetrics and Gynecology" = ~ my_n_percent(provider_taxonomy_desc == "Physician Assistants and Advanced Practice Nursing Providers Nurse Practitioner Obstetrics and Gynecology"),
+         "Physician Assistants and Advanced Practice Nursing Providers Nurse Practitioner Pediatrics" = ~ my_n_percent(provider_taxonomy_desc == "Physician Assistants and Advanced Practice Nursing Providers Nurse Practitioner Pediatrics"),
+         "Physician Assistants and Advanced Practice Nursing Providers Nurse Practitioner Perinatal" = ~ my_n_percent(provider_taxonomy_desc == "Physician Assistants and Advanced Practice Nursing Providers Nurse Practitioner Perinatal"),
+         "Physician Assistants and Advanced Practice Nursing Providers Nurse Practitioner Primary Care" = ~ my_n_percent(provider_taxonomy_desc == "Physician Assistants and Advanced Practice Nursing Providers Nurse Practitioner Primary Care"),
+         "Physician Assistants and Advanced Practice Nursing Providers Nurse Practitioner Psychiatric Mental Health" = ~ my_n_percent(provider_taxonomy_desc == "Physician Assistants and Advanced Practice Nursing Providers Nurse Practitioner Psychiatric Mental Health"),
+         "Physician Assistants and Advanced Practice Nursing Providers Nurse Practitioner Women’s Health" = ~ my_n_percent(provider_taxonomy_desc == "Physician Assistants and Advanced Practice Nursing Providers Nurse Practitioner Women’s Health"),
+         "Physician Assistants and Advanced Practice Nursing Providers Physician Assistant" = ~ my_n_percent(provider_taxonomy_desc == "Physician Assistants and Advanced Practice Nursing Providers Physician Assistant"),
+         "Physician Assistants and Advanced Practice Nursing Providers Physician Assistant Medical" = ~ my_n_percent(provider_taxonomy_desc == "Physician Assistants and Advanced Practice Nursing Providers Physician Assistant Medical"),
+         "Physician Assistants and Advanced Practice Nursing Providers Physician Assistant Surgical" = ~ my_n_percent(provider_taxonomy_desc == "Physician Assistants and Advanced Practice Nursing Providers Physician Assistant Surgical"),
+         "Podiatric Medicine and Surgery Service Providers Podiatrist" = ~ my_n_percent(provider_taxonomy_desc == "Podiatric Medicine and Surgery Service Providers Podiatrist"),
+         "Podiatric Medicine and Surgery Service Providers Podiatrist Foot and Ankle Surgery" = ~ my_n_percent(provider_taxonomy_desc == "Podiatric Medicine and Surgery Service Providers Podiatrist Foot and Ankle Surgery"),
+         "Podiatric Medicine and Surgery Service Providers Podiatrist Primary Podiatric Medicine" = ~ my_n_percent(provider_taxonomy_desc == "Podiatric Medicine and Surgery Service Providers Podiatrist Primary Podiatric Medicine"),
+         "Respiratory Developmental Rehabilitative and Restorative Service Providers Occupational Therapist" = ~ my_n_percent(provider_taxonomy_desc == "Respiratory Developmental Rehabilitative and Restorative Service Providers Occupational Therapist"),
+         "Respiratory Developmental Rehabilitative and Restorative Service Providers Occupational Therapist Feeding Eating &Swallowing" = ~ my_n_percent(provider_taxonomy_desc == "Respiratory Developmental Rehabilitative and Restorative Service Providers Occupational Therapist Feeding Eating &Swallowing"),
+         "Respiratory Developmental Rehabilitative and Restorative Service Providers Occupational Therapist Hand" = ~ my_n_percent(provider_taxonomy_desc == "Respiratory Developmental Rehabilitative and Restorative Service Providers Occupational Therapist Hand"),
+         "Respiratory Developmental Rehabilitative and Restorative Service Providers Occupational Therapist Pediatrics" = ~ my_n_percent(provider_taxonomy_desc == "Respiratory Developmental Rehabilitative and Restorative Service Providers Occupational Therapist Pediatrics"),
+         "Respiratory Developmental Rehabilitative and Restorative Service Providers Physical Therapist" = ~ my_n_percent(provider_taxonomy_desc == "Respiratory Developmental Rehabilitative and Restorative Service Providers Physical Therapist"),
+         "Respiratory Rehabilitative and Restorative Service Providers Physical Therapist Sports" = ~ my_n_percent(provider_taxonomy_desc == "Respiratory Rehabilitative and Restorative Service Providers Physical Therapist Sports"),
+         "Speech Language and Hearing Service Providers" = ~ my_n_percent(provider_taxonomy_desc == "Speech Language and Hearing Service Providers"),
+         "Speech Language and Hearing Service Providers Audiologist" = ~ my_n_percent(provider_taxonomy_desc == "Speech Language and Hearing Service Providers Audiologist"),
+         "Suppliers Durable Medical Equipment and Medical Supplies" = ~ my_n_percent(provider_taxonomy_desc == "Suppliers Durable Medical Equipment and Medical Supplies"),
+         "Suppliers Durable Medical Equipment and Medical Supplies Oxygen Equipment and Supplies" = ~ my_n_percent(provider_taxonomy_desc == "Suppliers Durable Medical Equipment and Medical Supplies Oxygen Equipment and Supplies"),
+         "Suppliers Pharmacy" = ~ my_n_percent(provider_taxonomy_desc == "Suppliers Pharmacy"),
+         "Suppliers Pharmacy Clinic Pharmacy" = ~ my_n_percent(provider_taxonomy_desc == "Suppliers Pharmacy Clinic Pharmacy"),
+         "Suppliers Pharmacy Community Retail Pharmacy" = ~ my_n_percent(provider_taxonomy_desc == "Suppliers Pharmacy Community Retail Pharmacy"),
+         "Suppliers Pharmacy Compounding Pharmacy" = ~ my_n_percent(provider_taxonomy_desc == "Suppliers Pharmacy Compounding Pharmacy"),
+         "Suppliers Pharmacy Home Infusion Therapy Pharmacy" = ~ my_n_percent(provider_taxonomy_desc == "Suppliers Pharmacy Home Infusion Therapy Pharmacy"),
+         "Suppliers Pharmacy Institutional Pharmacy" = ~ my_n_percent(provider_taxonomy_desc == "Suppliers Pharmacy Institutional Pharmacy"),
+         "Suppliers Pharmacy Long-term Care Pharmacy" = ~ my_n_percent(provider_taxonomy_desc == "Suppliers Pharmacy Long-term Care Pharmacy"),
+         "Suppliers Pharmacy Mail Order Pharmacy" = ~ my_n_percent(provider_taxonomy_desc == "Suppliers Pharmacy Mail Order Pharmacy"),
+         "Suppliers Pharmacy Managed Care Organization Pharmacy" = ~ my_n_percent(provider_taxonomy_desc == "Suppliers Pharmacy Managed Care Organization Pharmacy"),
+         "Suppliers Pharmacy Specialty Pharmacy" = ~ my_n_percent(provider_taxonomy_desc == "Suppliers Pharmacy Specialty Pharmacy"),
+         "Suppliers Portable X-Ray Supplier" = ~ my_n_percent(provider_taxonomy_desc == "Suppliers Portable X-Ray Supplier"),
+         "Suppliers Prosthetic Orthotic Supplier" = ~ my_n_percent(provider_taxonomy_desc == "Suppliers Prosthetic Orthotic Supplier"),
+         "Transportation Services Ambulance" = ~ my_n_percent(provider_taxonomy_desc == "Transportation Services Ambulance"),
+         "Transportation Services Ambulance Air Transport" = ~ my_n_percent(provider_taxonomy_desc == "Transportation Services Ambulance Air Transport"),
+         "Transportation Services Ambulance Land Transport" = ~ my_n_percent(provider_taxonomy_desc == "Transportation Services Ambulance Land Transport"),
+         "Missing" = ~ my_n_percent(is.na(provider_taxonomy_desc))))
+
+e <- pt_visit_NPI2 %>% group_by(Cat_Visits) %>% 
+  summary_table(d)
+Total <- pt_visit_NPI2
+f <- Total %>% summary_table(d)
+g <- cbind(f, e) 
+
+colnames(g) <- c(" Total (N = 364,874)", "1st Visit (N = 107,599)",  "2nd Visit(N = 82,396)",   "3rd Visit (N = 70,681)",   "4+ Visits (N = 104,198)")
+print(g)
+````
+
+
+Using the closed claims, we can proritize the NPI taxonomies to classify as hospital or non-hospital. From the table above we can see, around 26% of the visits are missing NPI data these will get dropped from the analysis. The largest percentage of IG  is administered at a hospital (21%) "Hospitals General Acute Care Hospital" and other hospital sites will get collapsed into this. This includes:
+
+- Hospital Units Medicare Defined Swing Bed Unit
+
+- Hospital Units Psychiatric Unit
+
+- Hospital Units Rehabilitation Unit
+
+- Hospitals General Acute Care Hospital
+
+- Hospitals General Acute Care Hospital Children
+
+- Hospitals General Acute Care Hospital Critical Access
+
+- Hospitals Long Term Care Hospital
+
+- Hospitals Psychiatric Hospital
+
+- Hospitals Rehabilitation Hospital
+
+- Hospitals Special(ty) Hospital
+
+
+IG infusion in hospital sizes is highest at the 1st visit (23%) and tapers to 18% at the 4th + visit. 
+
+
+
+
+Following hospitalizations, the next largest percentage of IG visits is "Internal Medicine Hematology and Oncology" at 9% followed by  "Suppliers Durable Medical Equipment and Medical Supplies" at 8%. This percentage is lower at the 1st visit ( 7%) and increases at the 4th + visit (9%). 
+
+The following list shows the decreasing percentage of visits at sites where IG is given. 
+
+- Hospitals General Acute Care Hospital (21%)
+
+- Internal Medicine Hematology and Oncology (9%)
+
+- Suppliers Durable Medical Equipment and Medical Supplies (8%)
+
+- Agencies Home Health (6%)
+
+- Psychiatry and Neurology: Neurology (5%)
+
+- Internal Medicine (3%)
+
+- Allergy and Immunology (3%)
+
+- Suppliers Pharmacy (3%)
+
+
+These sites account for 58% of the visits. Once we can identify patients as visiting a hospital site, a non-hospital site, or both a hospital and non-hospital site. we can repeat this exercise looking at unique patients instead of visits. 
+
+
+There are several taxonomies where there are such a few numbers of visits that if identifying the site proves to be difficult we should consider removing them from the analysis. For these sites there are only 1, 2, oe 3 visits ovserved. 
+
+- Agencies Voluntary or Charitable
+
+- Dermatology Clinical and Laboratory Dermatological Immunology
+
+- Emergency Medicine Medical Toxicology
+
+- Internal Medicine Adolescent Medicine
+
+- Internal Medicine Bariatric Medicine
+
+- Internal Medicine Transplant Hepatology
+
+- Nuclear Medicine Nuclear Imaging and Therapy
+
+- Ophthalmology Glaucoma Specialist
+
+- Orthopedic Surgery Foot and Ankle Surgery
+
+- Orthopedic Surgery Orthopedic Surgery of the Spine
+
+- Orthopedic Surgery Orthopedic Trauma
+
+- Otolaryngology Otology & Neurotology
+
+- Otolaryngology Plastic Surgery within the Head and Neck
+
+- Pathology Dermapathology
+
+- Pediatrics Pediatric Transplant Hepatology
+
+- Physical Medicine and Rehabilitation Hospice and Palliative Medicine
+
+- Physical Medicine and Rehabilitation Spinal Cord Injury Medicine
+
+- Physical Medicine and Rehabilitation Sports Medicine
+
+- Plastic Surgery Surgery of the Hand
+
+- Preventive Medicine Undersea and Hyperbaric Medicine
+
+- Surgery Surgery of the Hand
+
+- Urology Pediatric Urology
+
+- Chiropractic Providers Chiropractor Rehabilitation
+
+- Dietary and Nutritional Service Providers Dietician Registered Nutrition Pediatric 
+
+- Eye and Vision Service Providers Optometrist Corneal and Contact Management
+
+- Female Pelvic Medicine and Reconstructive Surgery
+
+- Physician Assistants and Advanced Practice Nursing Providers Clinical Nurse Specialist Acute Care
+
+- Physician Assistants and Advanced Practice Nursing Providers Clinical Nurse Specialist Family Health
+
+- Physician Assistants and Advanced Practice Nursing Providers Nurse Practitioner Neonatal
+
+- Physician Assistants and Advanced Practice Nursing Providers Nurse Practitioner Obstetrics and Gynecology
+
+- Physician Assistants and Advanced Practice Nursing Providers Nurse Practitioner Perinatal
+
+- Podiatric Medicine and Surgery Service Providers Podiatrist Primary Podiatric Medicine
+
+- Respiratory Developmental Rehabilitative and Restorative Service Providers Occupational Therapist Hand
+
+- Respiratory Rehabilitative and Restorative Service Providers Physical Therapist Sports

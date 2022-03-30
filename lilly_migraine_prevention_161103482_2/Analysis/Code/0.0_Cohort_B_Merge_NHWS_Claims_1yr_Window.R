@@ -93,16 +93,17 @@ Mx_Header <- Mx_Header %>% filter(d1 %in% migraine_ICDs |
                        d25 %in% migraine_ICDs |
                        d26 %in% migraine_ICDs) # 1,263 claims
 
-Mx_H_2017 <- Mx_Header %>% filter(claim_date >= "2017-01-01" & claim_date <= "2017-12-31" )
+
+Mx_H_2017 <- Mx_Header #%>% filter(claim_date >= "2017-01-01" & claim_date <= "2017-12-31" )
 Mx_H_2017$client_patient_id %>% n_distinct()
-  # 186 claims,  68 patients
+  # 204 patients
 
 
 Mx_Service_Lines <- Mx_Service_Lines %>% filter(claim_id %in% Mx_H_2017$claim_id)
-Mx_Service_Lines$client_patient_id %>% n_distinct() # 68
+Mx_Service_Lines$client_patient_id %>% n_distinct() # 204
 Mx_Service_Lines$service_to %>% range(na.rm = T)
-Mx_Service_Lines <- Mx_Service_Lines %>% filter(service_from >= "2017-01-01" & service_from <= "2017-12-31" )
-Mx_Service_Lines$client_patient_id %>% n_distinct() # 68
+#Mx_Service_Lines <- Mx_Service_Lines %>% filter(service_from >= "2017-01-01" & service_from <= "2017-12-31" )
+Mx_Service_Lines$client_patient_id %>% n_distinct() # 204
 # # check with Jack's file 
 # JR_Med <- read_csv("~/Kantar/Arunajadai, Srikesh (KH) - RWE_US/Lilly_migraine_prevention_161103482_2/Migraine_Prev_cohort_Medical_JR.csv", 
 #                    col_types = cols(X1 = col_skip(), 
@@ -161,28 +162,7 @@ Rx_Claims <- Rx_Claims %>% filter(transaction_type == "PAID") # 108,367 claims
 Rx_Claims$client_patient_id %>% n_distinct() # 680
 
 
-         
-# Inclusion_Rx_Claims <- Rx_Claims%>% filter(client_patient_id %in% Enrollment_File$client_patient_id) %>%
-#   filter(ndc11 %in% inclusion_meds$code | ndc11 %in% migraine_NDCs$concept_code) 
-Rx_Claims <- Rx_Claims %>% filter(date_of_service >= "2017-01-01" & date_of_service <= "2017-12-31") # 427 claims, 73 patients; without OHDSI NCDs
-Rx_Claims$client_patient_id %>% n_distinct()    # 461
-
-# # check with Jack's file
-# 
-# 
-# JR_Pharm <- read_csv("~/Kantar/Arunajadai, Srikesh (KH) - RWE_US/Lilly_migraine_prevention_161103482_2/Migraine_Prev_cohort_Pharma_JR.csv", 
-#                      col_types = cols(X1 = col_skip(), date_of_service = col_date(format = "%m/%d/%Y"), 
-#                                       date_prescription_written = col_date(format = "%m/%d/%Y"), 
-#                                       patient_dob = col_date(format = "%m/%d/%Y"), 
-#                                       timestamp_authorized = col_datetime(format = "%m/%d/%Y %H:%M")))   
-# 
-# Check_pharm <- JR_Pharm %>% filter(!client_patient_id %in% Enrollment_File$client_patient_id)
-# 
-# Check_NDCs <- JR_Pharm %>% filter(! ndc11 %in% inclusion_meds$code | !ndc11 %in% migraine_NDCs$concept_code)
-# 
-# Check_NDCs2 <- OHDSI %>% filter(concept_code %in% Check_NDCs$ndc11)# puling in 114 meds not triptan or ergot
-
-
+rm(ergots, inclusion_meds, Triptan_and_Ergot_Meds, triptans)
 
 # 4. add in bridging file to claims-----
 
@@ -194,13 +174,15 @@ Bridge <- Bridge %>% mutate(client_patient_id = `Komodo ID`)
 
 Mx_H_2017<- Mx_H_2017 %>% left_join(Bridge) 
 Med_2017 <- Mx_H_2017 %>% full_join(Mx_Service_Lines)
-Med_2017$client_patient_id %>% n_distinct() # 68
+Med_2017$client_patient_id %>% n_distinct() # 204
 
 Rx_Claims <- Rx_Claims %>% left_join(Bridge) 
-Rx_Claims$client_patient_id %>% n_distinct() # 461
+colnames(Rx_Claims) <- paste("p", colnames(Rx_Claims), sep = ".")
+Rx_Claims <- Rx_Claims %>% rename(client_patient_id = p.client_patient_id,
+                                  zkey = p.zkey)
+Rx_Claims$client_patient_id %>% n_distinct() # 680
+Rx_Claims$zkey %>% n_distinct()
 
-
-rm(Enrollment_File, ICD_fields, Mx_Header, Mx_Service_Lines,OHDSI)
 
 
 
@@ -222,72 +204,95 @@ us_date <- us_date %>% filter(source == "us_2017")
 us_date$START_TIME <- date(as.Date(us_date$START_TIME))
 us_date <- us_date %>% select(-DATE, -uniqueid)
 us_date  <- us_date %>% rename(zkey = zKey)
-
+dbDisconnect(z)
 
 load("C:/Users/BalkaranB/Kantar/Arunajadai, Srikesh (KH) - RWE_US/Lilly_migraine_prevention_161103482_2/PhaseI_clean.RData")
 
 dat_clean <- dat_clean %>% filter(zkey %in% Bridge$zkey)
 dat_clean$source <- dat_clean$source %>% as.character() %>% str_trim("both")
 dat_clean <- dat_clean %>% left_join(us_date, by = c("zkey", "source"))
+rm(us_date)
 
-b <- dat_clean %>% left_join(Med_2017) %>% full_join(Rx_Claims)   475
+rm(Bridge)
+
+
+drop2 <- c("p.timestamp_authorized","p.group_id", 
+           "p.diagnosis_code", "p.diagnosis_code_type",          
+           "p.ndc11_original", "p.quantity_prescribed_original",
+           "p.is_service", "p.prior_authorization_type_code",
+           "p.is_compound_drug", "p.level_of_service",             
+           "p.coupon_number", "p.coupon_type",                 
+           "p.coupon_value_amount", "p.pharmacy_submitted_cost",       
+           "p.patient_pay","p.copay_coinsurance",            
+           "p.reject_code_1", "p.reject_code_2" ,"p.reject_code_3", 
+           "p.reject_code_4","p.reject_code_5", "p.extract_date" )
+
+Rx_Claims <- Rx_Claims %>% select(-drop2)
+
+drop3 <- c("orig_claim_id", "assignment_benefits_indicator",   
+           "release_of_information_indicator",   "diagnosis_e_code_1", 
+           "diagnosis_e_code_2", "diagnosis_group", "p1", "p2",                              
+           "p3", "p4",  "p5", "p6", "p7", "p8", "p9", "p10",                             
+           "p11", "p12", "p13", "p14", "p15", "p16",                             
+           "p17", "p18", "p19", "p20", "p21", "p22",                             
+           "p23", "p24", "p25", "payment_type", "patient_amount_paid",
+           "revenue_center_code", "revenue_code")
+
+Med_2017 <- Med_2017 %>% select(-drop3)
+
+b <- dat_clean %>% left_join(Med_2017)
+c <- dat_clean %>% full_join(Rx_Claims)
+
 
 b <- b %>% mutate(NHWSindex_date = START_TIME) 
 b$client_patient_id %>% is.na() %>% table() 
 b <- b %>% filter(!is.na(client_patient_id))
-b$client_patient_id %>% n_distinct() #474
-b$zkey %>% n_distinct() #474
-NHWS_Med_Pharm <- b %>% group_by(client_patient_id, source) %>% filter(row_number(NHWSindex_date)==1) %>% 
+b$client_patient_id %>% n_distinct() #193
+b <- b %>% mutate(preNHWS = (NHWSindex_date - months(6)),
+                  postNHWS = (NHWSindex_date + months(6)))
+b <- b %>% filter((claim_date >= preNHWS & claim_date <= postNHWS) | 
+                    (date_of_service >= preNHWS & date_of_service <= postNHWS))
+b$zkey %>% n_distinct() #65
+
+# allow 1 year windowaround NHWS date 
+c <- c %>% mutate(NHWSindex_date = START_TIME) 
+c$client_patient_id %>% is.na() %>% table() 
+c <- c %>% filter(!is.na(client_patient_id))
+c$client_patient_id %>% n_distinct() #680
+c$zkey %>% n_distinct() #193
+c <- c %>% mutate(preNHWS = (NHWSindex_date - months(6)),
+             postNHWS = (NHWSindex_date + months(6)))
+c <- c %>% filter(p.date_of_service >= preNHWS & p.date_of_service <= postNHWS)
+c$client_patient_id %>% n_distinct() #438
+
+
+save(b, c,file = "C:/Users/BalkaranB/Kantar/Arunajadai, Srikesh (KH) - RWE_US/Lilly_migraine_prevention_161103482_2/Data to merge.RData")
+
+
+NHWS_Med_Pharm <- b %>% full_join(c)
+NHWS_Med_Pharm$client_patient_id %>% n_distinct() #450
+NHWS_Med_Pharm$zkey %>% n_distinct() # 450
+
+
+NHWS_Med_Pharm <- NHWS_Med_Pharm %>% group_by(client_patient_id, source) %>% filter(row_number(NHWSindex_date)==1) %>% 
   arrange(client_patient_id, source) 
 
+CohortB1 <- NHWS_Med_Pharm
+CohortB1 <- CohortB1 %>% ungroup()
+CohortB1$DEPEMP_R <- CohortB1$DEPEMP_R %>% 
+  fct_collapse(`Employed full time` = c("Employed full time "),
+               `Employed part time` = "Employed part time ",
+               `Self-employed` = "Self-employed ",
+               `Not employed` = c("Homemaker ", "Student ",
+                                  "Disability (Long-Term/Short-Term) ",
+                                  "Not employed, but looking for work ",
+                                  "Not employed and not looking for work "),
+               `Retired` = "Retired ")
 
+save(CohortB1,file = "C:/Users/BalkaranB/Kantar/Arunajadai, Srikesh (KH) - RWE_US/Lilly_migraine_prevention_161103482_2/CohortB1.RData")
 
-# df <- df %>%
-#   group_by(card_id) %>%
-#   arrange(purchase_date) %>%
-#   mutate(diff = purchase_date - lag(purchase_date, default = first(purchase_date))) %>%
-#   mutate(diff = round(diff/86400, digits = 2))
+# 450 patientsif we use claims with a migraine DX bound within a 1 year window around NHWS date
 
+# create claims derived variables
 
-Linked_Migraine_Header_2017 <- Linked_Migraine_Header_2017 %>% group_by(client_patient_id) %>% arrange(claim_date) %>% 
-  mutate(date_diff = claim_date - lag(claim_date)) %>% 
-  arrange(client_patient_id, claim_date, date_diff) 
-
-Linked_Migraine_Header_2017$claim <- "m"
-Linked_Migraine_Header_2017 %>% select(client_patient_id, claim_id, claim_date, date_diff) %>% View()
-
-
-# linked Rx patients
-Linked_Inclusion_Rx_Claims <- Linked_Inclusion_Rx_Claims %>% group_by(client_patient_id) %>% arrange(date_of_service) %>% 
-  mutate(p.date.diff = date_of_service - lag(date_of_service)) %>% 
-  arrange(client_patient_id, date_of_service, p.date.diff)
-
-Linked_Inclusion_Rx_Claims$claim <- "p"
-
-
-# merge header and Rx
-
-Linked_Claims <- Linked_Migraine_Header_2017 %>% 
-  select(client_patient_id, zkey,  source, claim_id, claim_date) %>% #date_diff, claim) %>% 
-  full_join(select(Linked_Inclusion_Rx_Claims, client_patient_id, zkey, source, claim_id, 
-                  date_of_service)) %>% #p.date.diff, claim)) %>% 
-  arrange(client_patient_id, zkey, source, claim_date, date_of_service)
-write.xlsx(Linked_Claims, file= "~/Kantar/Arunajadai, Srikesh (KH) - RWE_US/Lilly_migraine_prevention_161103482_2/Linked_Claims.xlsx")
-
-
-Linked_Claims_Inclusion_Identifier <- read_excel("C:/Users/balkaranb/Kantar/Arunajadai, Srikesh (KH) - RWE_US/Lilly_migraine_prevention_161103482_2/Linked_Claims_Inclusion_Identifier.xlsx", 
-                                                 col_types = c("numeric", "numeric", "text", 
-                                                               "text", "text", "date", "text", "text", 
-                                                               "date", "text", "numeric", "text"))
-
-MG <- Linked_Claims_Inclusion_Identifier %>% filter(Keep == 1) # 541 claims
-MG$client_patient_id %>% n_distinct() # 73 patients
-MG$zkey %>% n_distinct() # 73 patients
-
-
-
-#save(MG, file = "~/Kantar/Arunajadai, Srikesh (KH) - RWE_US/Lilly_migraine_prevention_161103482_2/PhaseII.RData")
-
-load("~/Kantar/Arunajadai, Srikesh (KH) - RWE_US/Lilly_migraine_prevention_161103482_2/PhaseII.RData")
-load("~/Kantar/Arunajadai, Srikesh (KH) - RWE_US/Lilly_migraine_prevention_161103482_2/PhaseII.RData")
 
